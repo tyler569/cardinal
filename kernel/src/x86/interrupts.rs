@@ -1,8 +1,13 @@
+use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::x86::cpu::cpu_num;
 use crate::x86::frame::InterruptFrame;
 use crate::x86::lapic;
 use core::arch::asm;
+use core::cell::UnsafeCell;
+use core::ops::Deref;
+use core::sync::atomic::{AtomicU64, Ordering};
+use spin::Lazy;
 
 pub unsafe fn enable_interrupts() {
     asm!("cli");
@@ -39,16 +44,12 @@ fn handle_irq(frame: &mut InterruptFrame) {
     lapic::eoi();
 }
 
-static mut TICKS: [u64; 16] = [0; 16];
-
 fn handle_timer(frame: &mut InterruptFrame) {
     let cpu = cpu_num() as usize;
-    unsafe {
-        TICKS[cpu] += 1;
+    PerCpu::get_mut().ticks.fetch_add(1, Ordering::Relaxed);
 
-        if TICKS[cpu] % 100 == 0 {
-            println!("CPU {} timer {}", cpu, TICKS[cpu]);
-        }
+    if PerCpu::get().ticks.load(Ordering::Relaxed) % 1000 == 0 {
+        println!("CPU {} timer {:?}", cpu_num(), PerCpu::get().ticks)
     }
 }
 
@@ -67,7 +68,11 @@ fn handle_ipi(frame: &mut InterruptFrame) {
 }
 
 fn unexpected_interrupt(frame: &InterruptFrame) {
-    println!("CPU {} Unhandled {}", cpu_num(), INTERRUPT_INFO[frame.interrupt_number as usize].name);
+    println!(
+        "CPU {} Unhandled {}",
+        cpu_num(),
+        INTERRUPT_INFO[frame.interrupt_number as usize].name
+    );
     println!("{}", frame);
     panic!();
 }

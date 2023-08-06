@@ -21,9 +21,10 @@ mod pic;
 mod pio;
 mod serial;
 
-pub use serial::SERIAL;
-pub use cpu::cpu_num;
 pub use context::Context;
+pub use cpu::{Cpu, cpu_num};
+pub use serial::SERIAL;
+use crate::per_cpu::PerCpu;
 
 static DIRECT_MAP_OFFSET: Once<usize> = Once::new();
 static SYSTEM_INIT_DONE: AtomicBool = AtomicBool::new(false);
@@ -36,7 +37,6 @@ pub fn early_system_init() {
     }
 
     unsafe {
-        cpu::system_init();
         idt::system_init();
         pic::remap_and_disable();
 
@@ -112,6 +112,10 @@ pub fn sleep_forever_no_irq() -> ! {
     }
 }
 
+pub fn timestamp() -> u64 {
+    PerCpu::get().ticks.load(Ordering::Relaxed)
+}
+
 unsafe fn acpi_debug() {
     let acpi_tables = acpi::init();
     let platform_info = ::acpi::PlatformInfo::new(&acpi_tables).unwrap();
@@ -119,9 +123,7 @@ unsafe fn acpi_debug() {
         "platform_info: {:?}",
         platform_info.processor_info.unwrap().application_processors
     );
-    if let ::acpi::platform::interrupt::InterruptModel::Apic(apic) =
-        platform_info.interrupt_model
-    {
+    if let ::acpi::platform::interrupt::InterruptModel::Apic(apic) = platform_info.interrupt_model {
         println!("apic: {:#x?}", apic);
     }
 }

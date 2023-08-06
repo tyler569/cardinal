@@ -1,5 +1,5 @@
-use core::arch::asm;
 use crate::x86::cpu;
+use core::arch::asm;
 
 pub unsafe fn long_jump(jump_to: usize) -> ! {
     let new_stack = cpu::kernel_stack();

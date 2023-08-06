@@ -1,5 +1,5 @@
-use crate::{limine, x86};
 use crate::print::println;
+use crate::{limine, x86};
 use acpi::{AcpiTables, PhysicalMapping};
 use core::ptr::NonNull;
 

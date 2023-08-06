@@ -2,6 +2,8 @@ use crate::print::println;
 use crate::x86::gdt;
 use crate::x86::gdt::Tss;
 use core::arch::asm;
+use crate::NUM_CPUS;
+use crate::per_cpu::PerCpu;
 
 pub fn cpuid(a: u32, c: u32) -> [u32; 4] {
     let mut result: [u32; 4] = [0; 4];
@@ -49,26 +51,26 @@ pub fn cpu_num() -> u32 {
 }
 
 #[derive(Copy, Clone)]
-struct Cpu {
+pub struct Cpu {
     initialized: bool,
     gdt: [u64; 7],
     tss: Tss,
-    stack: Stack,
-    df_stack: Stack,
+    stack: *const Stack,
+    df_stack: *const Stack,
 }
 
 impl Cpu {
-    const fn new() -> Self {
+    pub(crate) const fn new() -> Self {
         Self {
             initialized: false,
             gdt: [0; 7],
             tss: Tss::new(),
-            stack: Stack::new(),
-            df_stack: Stack::new(),
+            stack: core::ptr::null(),
+            df_stack: core::ptr::null(),
         }
     }
 
-    fn setup(&mut self) {
+    pub(crate) fn setup(&mut self, cpu_num: usize) {
         if self.initialized {
             panic!("CPU already initialized");
         }
@@ -77,8 +79,11 @@ impl Cpu {
 
         unsafe { gdt::init_in_place(&mut self.gdt, &mut self.tss) };
 
-        self.tss.set_kernel_stack(self.stack.top() as u64);
-        self.tss.set_df_stack(self.df_stack.top() as u64);
+        self.stack = unsafe { &STACKS[cpu_num].0 } as *const _;
+        self.df_stack = unsafe { &STACKS[cpu_num].1 } as *const _;
+
+        self.tss.set_kernel_stack(unsafe { (*self.stack).top() as u64 });
+        self.tss.set_df_stack(unsafe { (*self.df_stack).top() as u64 });
     }
 
     fn use_(&self) {
@@ -86,7 +91,7 @@ impl Cpu {
     }
 }
 
-static mut CPUS: [Cpu; 16] = [Cpu::new(); 16];
+static mut STACKS: [(Stack, Stack); NUM_CPUS] = [(Stack::new(), Stack::new()); NUM_CPUS];
 
 #[repr(align(16))]
 #[derive(Copy, Clone)]
@@ -104,14 +109,8 @@ impl Stack {
     }
 }
 
-pub(crate) unsafe fn system_init() {
-    for cpu in CPUS.iter_mut() {
-        cpu.setup();
-    }
-}
-
 pub(crate) unsafe fn use_() {
-    let cpu = &CPUS[cpu_num() as usize];
+    let cpu = &mut PerCpu::get_mut().arch;
     cpu.use_();
     asm!(
         "mov ds, ax",
@@ -124,5 +123,5 @@ pub(crate) unsafe fn use_() {
 }
 
 pub(crate) fn kernel_stack() -> u64 {
-    unsafe { CPUS[cpu_num() as usize] }.tss.kernel_stack()
+    PerCpu::get_mut().arch.tss.kernel_stack()
 }

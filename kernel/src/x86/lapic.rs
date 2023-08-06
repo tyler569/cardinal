@@ -16,7 +16,6 @@ pub fn init() {
     }
 }
 
-
 pub unsafe fn read(offset: isize) -> u32 {
     let ptr = MAPPED_ADDRESS.byte_offset(offset);
     ptr.read_volatile()
