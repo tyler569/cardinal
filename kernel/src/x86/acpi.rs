@@ -1,6 +1,5 @@
-use crate::limine;
+use crate::{limine, x86};
 use crate::print::println;
-use crate::x86::X86ARCH;
 use acpi::{AcpiTables, PhysicalMapping};
 use core::ptr::NonNull;
 
@@ -13,9 +12,7 @@ impl acpi::AcpiHandler for AcpiHandler {
         physical_address: usize,
         size: usize,
     ) -> PhysicalMapping<Self, T> {
-        let Some(offset) = X86ARCH.direct_map_offset.get() else {
-            panic!("Direct map offset not set");
-        };
+        let offset = x86::direct_map_offset();
 
         let virtual_pointer;
         if physical_address < offset {

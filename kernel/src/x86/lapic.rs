@@ -1,6 +1,6 @@
-use crate::arch::Arch;
 use crate::print::println;
-use crate::x86::{cpu, X86Arch};
+use crate::x86;
+use crate::x86::cpu;
 
 pub const DEFAULT_ADDRESS: usize = 0xfee0_0000;
 pub const MAPPED_ADDRESS: *mut u32 = (DEFAULT_ADDRESS + 0xFFFF_8000_0000_0000) as *mut u32;

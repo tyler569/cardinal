@@ -1,9 +1,8 @@
 use crate::print::println;
-use crate::x86::frame::InterruptFrame;
-use core::arch::asm;
-use crate::arch::Arch;
 use crate::x86::cpu::cpu_num;
-use crate::x86::{lapic, X86Arch, X86ARCH};
+use crate::x86::frame::InterruptFrame;
+use crate::x86::lapic;
+use core::arch::asm;
 
 pub unsafe fn enable_interrupts() {
     asm!("cli");
@@ -63,8 +62,8 @@ fn handle_ipi(frame: &mut InterruptFrame) {
     lapic::eoi();
 
     // let destination = if cpu_num() == 1 { 0 } else { 1 };
-    // X86ARCH.sleep(core::time::Duration::from_secs(1));
-    // X86ARCH.send_ipi(destination, 129);
+    // x86::sleep(core::time::Duration::from_secs(1));
+    // x86::send_ipi(destination, 129);
 }
 
 fn unexpected_interrupt(frame: &InterruptFrame) {

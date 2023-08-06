@@ -8,23 +8,21 @@
 use core::arch::asm;
 
 mod alloc;
-mod arch;
 mod limine;
 mod mem;
 mod print;
 mod thread;
 mod x86;
 
-pub(crate) use arch::Arch;
 pub(crate) use print::{print, println};
-pub(crate) use x86::X86ARCH as ARCH;
+pub(crate) use x86 as arch;
 
 #[no_mangle]
 pub unsafe extern "C" fn kernel_init() -> ! {
     mem::static_heap_init();
-    ARCH.early_system_init();
+    arch::early_system_init();
     println!("Hello, world!");
-    ARCH.long_jump(kernel_main as usize)
+    arch::long_jump(kernel_main as usize)
 }
 
 unsafe extern "C" fn kernel_main() -> ! {
@@ -33,41 +31,41 @@ unsafe extern "C" fn kernel_main() -> ! {
 
     // limine_info();
 
-    println!("this is cpu number {}", ARCH.cpu_num());
+    println!("this is cpu number {}", arch::cpu_num());
     start_ap();
 
-    ARCH.enable_interrupts();
+    arch::enable_interrupts();
 
-    ARCH.sleep(core::time::Duration::from_secs(1));
+    arch::sleep(core::time::Duration::from_secs(1));
     println!("sending IPI to cpu 1");
-    ARCH.send_ipi(1, 129);
+    arch::send_ipi(1, 129);
 
-    ARCH.sleep_forever()
+    arch::sleep_forever()
 }
 
 extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
-    unsafe { ARCH.early_cpu_init() };
+    unsafe { arch::early_cpu_init() };
 
     println!("this is the ap! (number {})", unsafe {
         (*info).processor_id
     });
-    println!("this is cpu number {}", ARCH.cpu_num());
+    println!("this is cpu number {}", arch::cpu_num());
 
-    unsafe { ARCH.long_jump(ap_main as usize) }
+    unsafe { arch::long_jump(ap_main as usize) }
 }
 
 unsafe fn ap_main() -> ! {
     asm!("int3");
 
-    ARCH.enable_interrupts();
-    ARCH.sleep_forever()
+    arch::enable_interrupts();
+    arch::sleep_forever()
 }
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     println!("PANIC: {}", info);
 
-    ARCH.sleep_forever_no_irq()
+    arch::sleep_forever_no_irq()
 }
 
 
