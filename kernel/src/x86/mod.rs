@@ -112,10 +112,6 @@ pub fn sleep_forever_no_irq() -> ! {
     }
 }
 
-pub fn timestamp() -> u64 {
-    PerCpu::get().ticks.load(Ordering::Relaxed)
-}
-
 unsafe fn acpi_debug() {
     let acpi_tables = acpi::init();
     let platform_info = ::acpi::PlatformInfo::new(&acpi_tables).unwrap();

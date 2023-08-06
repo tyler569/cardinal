@@ -1,4 +1,4 @@
-use crate::arch;
+use crate::{arch, timer};
 use crate::print::{print, println};
 use core::future::Future;
 use core::pin::{pin, Pin};
@@ -62,7 +62,7 @@ struct Sleep {
 
 impl Sleep {
     fn new(duration: core::time::Duration) -> Self {
-        let start_ts = arch::timestamp();
+        let start_ts = timer::timestamp();
         Self {
             start_ts,
             until: start_ts + duration.as_millis() as u64,
@@ -74,7 +74,7 @@ impl Future for Sleep {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        if arch::timestamp() > self.until {
+        if timer::timestamp() > self.until {
             Ready(())
         } else {
             Pending

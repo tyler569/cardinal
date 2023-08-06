@@ -56,7 +56,7 @@ pub struct LimineCpuInfo {
     pub processor_id: u32,
     pub lapic_id: u32,
     pub reserved: u64,
-    pub goto_address: extern "C" fn(*const LimineCpuInfo) -> !,
+    pub goto_address: unsafe extern "C" fn(*const LimineCpuInfo) -> !,
     pub extra_argument: u64,
 }
 

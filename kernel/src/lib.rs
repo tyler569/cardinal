@@ -9,6 +9,7 @@
 extern crate alloc;
 
 use core::arch::asm;
+use core::time::Duration;
 
 mod allocator;
 mod async_test;
@@ -17,6 +18,7 @@ mod limine;
 mod mem;
 mod per_cpu;
 mod print;
+mod timer;
 mod thread;
 mod x86;
 
@@ -39,12 +41,12 @@ unsafe extern "C" fn kernel_main() -> ! {
 
     // limine_info();
 
-    // start_ap();
+    start_ap();
 
     arch::enable_interrupts();
 
-    // arch::sleep(core::time::Duration::from_secs(1));
-    // arch::send_ipi(1, 129);
+    timer::insert(Duration::from_secs(1), || println!("timer 1"));
+    // timer::insert(Duration::from_secs(1), || arch::send_ipi(1, 129));
 
     let res = async_test::run_async(async_test::foobar(10, 11));
     println!("async result: {}", res);
@@ -52,17 +54,15 @@ unsafe extern "C" fn kernel_main() -> ! {
     arch::sleep_forever()
 }
 
-extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
-    unsafe { arch::early_cpu_init() };
+unsafe extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
+    arch::early_cpu_init();
 
-    println!("ap_init (number {})", unsafe { (*info).processor_id });
+    println!("ap_init (number {}, cpu {})", unsafe { (*info).processor_id }, arch::cpu_num());
 
-    unsafe { arch::long_jump(ap_main as usize) }
+    arch::long_jump(ap_main as usize)
 }
 
 unsafe fn ap_main() -> ! {
-    asm!("int3");
-
     arch::enable_interrupts();
     arch::sleep_forever()
 }

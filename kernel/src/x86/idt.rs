@@ -143,15 +143,6 @@ pub(super) unsafe fn system_init() {
     IDT[47] = IdtEntry::new(irq15, 0, 0, GateType::InterruptGate);
     IDT[128] = IdtEntry::new(isr_syscall, 0, 0, GateType::InterruptGate);
     IDT[129] = IdtEntry::new(isr_ipi, 0, 0, GateType::InterruptGate);
-
-    // for i in 0..48 {
-    //     let ptr = &IDT[i] as *const _ as *const u64;
-    //     println!("IDT[{}] = {:x?} -> {:016x?}:{:016x?}", i, ptr, *ptr, *(ptr.offset(1)));
-    // }
-    // for i in 127..132 {
-    //     let ptr = &IDT[i] as *const _ as *const u64;
-    //     println!("IDT[{}] = {:x?} -> {:016x?}:{:016x?}", i, ptr, *ptr, *(ptr.offset(1)));
-    // }
 }
 
 pub(super) unsafe fn load() {

@@ -13,6 +13,4 @@ impl Executor {
             work_to_do: AtomicBool::new(false),
         }
     }
-
-    fn spawn(&self, future: impl Future<Output = ()> + 'static + Send) {}
 }

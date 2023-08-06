@@ -46,11 +46,7 @@ fn handle_irq(frame: &mut InterruptFrame) {
 
 fn handle_timer(frame: &mut InterruptFrame) {
     let cpu = cpu_num() as usize;
-    PerCpu::get_mut().ticks.fetch_add(1, Ordering::Relaxed);
-
-    if PerCpu::get().ticks.load(Ordering::Relaxed) % 1000 == 0 {
-        println!("CPU {} timer {:?}", cpu_num(), PerCpu::get().ticks)
-    }
+    PerCpu::get_mut().timer.tick();
 }
 
 fn handle_syscall(frame: &mut InterruptFrame) {

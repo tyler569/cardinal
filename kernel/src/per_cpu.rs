@@ -3,19 +3,20 @@ use core::ops::{Deref, DerefMut, Index, IndexMut};
 use core::sync::atomic::AtomicU64;
 use spin::Lazy;
 use crate::{arch, NUM_CPUS};
+use crate::timer::Timer;
 
 pub struct PerCpu {
     this: *const UnsafeCell<Self>,
     pub arch: arch::Cpu,
-    pub ticks: AtomicU64,
+    pub timer: Timer,
 }
 
 impl PerCpu {
-    const fn new() -> Self {
+    fn new() -> Self {
         Self {
             this: 0 as *const _,
-            ticks: AtomicU64::new(0),
             arch: arch::Cpu::new(),
+            timer: Timer::new(),
         }
     }
 
