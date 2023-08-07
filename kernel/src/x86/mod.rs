@@ -32,7 +32,8 @@ static SYSTEM_INIT_DONE: AtomicBool = AtomicBool::new(false);
 pub fn early_system_init() {
     if SYSTEM_INIT_DONE
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-        .is_err() {
+        .is_err()
+    {
         return;
     }
 
@@ -53,7 +54,6 @@ pub fn early_system_init() {
             ioapic::init(&apic);
         }
 
-        ioapic::unmask_irq(3);
         ioapic::unmask_irq(4);
 
         // acpi_debug();

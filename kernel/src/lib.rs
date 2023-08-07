@@ -9,6 +9,7 @@
 extern crate alloc;
 
 use core::arch::asm;
+use core::pin::pin;
 use core::time::Duration;
 
 mod allocator;
@@ -22,6 +23,7 @@ mod thread;
 mod timer;
 mod x86;
 
+use crate::arch::SERIAL;
 use crate::per_cpu::PerCpu;
 pub(crate) use print::{print, println};
 pub(crate) use x86 as arch;
@@ -51,10 +53,20 @@ unsafe extern "C" fn kernel_main() -> ! {
     // let res = async_test::run_async(async_test::foobar(10, 11));
     // println!("async result: {}", res);
 
+    println!("spawning sleep task");
     PerCpu::get_mut().executor.spawn(async {
         loop {
             executor::sleep::sleep(Duration::from_millis(300)).await;
             print!(".")
+        }
+    });
+
+    println!("spawning serial task");
+    PerCpu::get_mut().executor.spawn(async {
+        loop {
+            let c = SERIAL.read();
+            let c = c.await;
+            print!("{}", c as char);
         }
     });
 

@@ -1,5 +1,5 @@
 use crate::per_cpu::PerCpu;
-use crate::print::{print, println};
+use crate::print::println;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, VecDeque};
 use alloc::vec::Vec;

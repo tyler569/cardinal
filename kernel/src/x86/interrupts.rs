@@ -2,7 +2,7 @@ use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::x86::cpu::cpu_num;
 use crate::x86::frame::InterruptFrame;
-use crate::x86::lapic;
+use crate::x86::{lapic, SERIAL};
 use core::arch::asm;
 use core::cell::UnsafeCell;
 use core::ops::Deref;
@@ -38,6 +38,7 @@ fn handle_irq(frame: &mut InterruptFrame) {
 
     match irq_num {
         0 => handle_timer(frame),
+        4 => handle_serial(frame),
         _ => println!("CPU {} Unhandled IRQ {}", cpu_num(), irq_num),
     }
 
@@ -47,6 +48,10 @@ fn handle_irq(frame: &mut InterruptFrame) {
 fn handle_timer(frame: &mut InterruptFrame) {
     let cpu = cpu_num() as usize;
     PerCpu::get_mut().timer.tick();
+}
+
+fn handle_serial(frame: &mut InterruptFrame) {
+    unsafe { SERIAL.handle_interrupt() };
 }
 
 fn handle_syscall(frame: &mut InterruptFrame) {

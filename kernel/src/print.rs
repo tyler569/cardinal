@@ -1,7 +1,7 @@
 pub fn _print(args: core::fmt::Arguments) {
     use crate::arch::SERIAL;
     use core::fmt::Write;
-    SERIAL.lock().write_fmt(args).unwrap();
+    SERIAL.try_write().map(|mut serial| serial.write_fmt(args).unwrap());
 }
 
 macro_rules! print {
