@@ -21,18 +21,18 @@ mod pic;
 mod pio;
 mod serial;
 
-pub use context::Context;
-pub use cpu::{Cpu, cpu_num};
-pub use serial::SERIAL;
 use crate::per_cpu::PerCpu;
+pub use context::Context;
+pub use cpu::{cpu_num, Cpu};
+pub use serial::SERIAL;
 
 static DIRECT_MAP_OFFSET: Once<usize> = Once::new();
 static SYSTEM_INIT_DONE: AtomicBool = AtomicBool::new(false);
 
 pub fn early_system_init() {
-    if let Err(_) =
-        SYSTEM_INIT_DONE.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-    {
+    if SYSTEM_INIT_DONE
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err() {
         return;
     }
 
@@ -43,8 +43,18 @@ pub fn early_system_init() {
         early_cpu_init();
 
         let direct_map_offset = (**limine::HHDM.response.get()).offset;
-
         DIRECT_MAP_OFFSET.call_once(|| direct_map_offset as usize);
+
+        let acpi_tables = acpi::init();
+        let platform_info = ::acpi::PlatformInfo::new(&acpi_tables).unwrap();
+        if let ::acpi::platform::interrupt::InterruptModel::Apic(apic) =
+            platform_info.interrupt_model
+        {
+            ioapic::init(&apic);
+        }
+
+        ioapic::unmask_irq(3);
+        ioapic::unmask_irq(4);
 
         // acpi_debug();
     }

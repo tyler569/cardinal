@@ -7,10 +7,10 @@ stdio_usage="-serial stdio"
 while getopts ":im" opt; do
   case ${opt} in
     i)
-      stdio_usage="-d int"
+      stdio_usage="-d int -serial unix:./serial,nowait,server"
       ;;
     m)
-      stdio_usage="-monitor stdio"
+      stdio_usage="-monitor stdio -serial unix:./serial,nowait,server"
       ;;
     \?)
       echo "Usage: run.bash [-im]"

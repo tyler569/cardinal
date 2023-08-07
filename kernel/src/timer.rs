@@ -1,11 +1,12 @@
+use crate::per_cpu::PerCpu;
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::sync::atomic::{AtomicU64, Ordering};
-use crate::per_cpu::PerCpu;
 
 struct TimerEvent {
     callback: Box<dyn FnOnce()>,
+    waker: Option<core::task::Waker>,
 }
 
 pub struct Timer {
@@ -26,6 +27,7 @@ impl Timer {
 
         let event = TimerEvent {
             callback,
+            waker: None,
         };
 
         let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
@@ -57,6 +59,9 @@ impl Timer {
         for key in keys {
             let event = self.events.remove(&key).unwrap();
             (event.callback)();
+            if let Some(waker) = event.waker {
+                waker.wake();
+            }
         }
     }
 }
@@ -65,7 +70,16 @@ pub fn timestamp() -> u64 {
     PerCpu::get().timer.ticks.load(Ordering::Relaxed)
 }
 
+pub fn ticks_for(duration: core::time::Duration) -> u64 {
+    Timer::duration_to_ticks(duration)
+}
+
 pub fn insert<F: FnOnce() + 'static>(duration: core::time::Duration, callback: F) {
     let callback = Box::new(callback);
     PerCpu::get_mut().timer.insert(duration, callback);
+}
+
+pub fn insert_at<F: FnOnce() + 'static>(time: u64, callback: F) {
+    let callback = Box::new(callback);
+    PerCpu::get_mut().timer.raw_insert(time, callback);
 }

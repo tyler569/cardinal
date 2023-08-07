@@ -18,13 +18,13 @@ mod limine;
 mod mem;
 mod per_cpu;
 mod print;
-mod timer;
 mod thread;
+mod timer;
 mod x86;
 
+use crate::per_cpu::PerCpu;
 pub(crate) use print::{print, println};
 pub(crate) use x86 as arch;
-use crate::per_cpu::PerCpu;
 
 pub const NUM_CPUS: usize = 16;
 
@@ -45,11 +45,23 @@ unsafe extern "C" fn kernel_main() -> ! {
 
     arch::enable_interrupts();
 
-    timer::insert(Duration::from_secs(1), || println!("timer 1"));
+    // timer::insert(Duration::from_secs(1), || println!("timer 1"));
     // timer::insert(Duration::from_secs(1), || arch::send_ipi(1, 129));
 
-    let res = async_test::run_async(async_test::foobar(10, 11));
-    println!("async result: {}", res);
+    // let res = async_test::run_async(async_test::foobar(10, 11));
+    // println!("async result: {}", res);
+
+    PerCpu::get_mut().executor.spawn(async {
+        loop {
+            executor::sleep::sleep(Duration::from_millis(300)).await;
+            print!(".")
+        }
+    });
+
+    loop {
+        PerCpu::get_mut().executor.do_work();
+        asm!("hlt");
+    }
 
     arch::sleep_forever()
 }
@@ -57,7 +69,11 @@ unsafe extern "C" fn kernel_main() -> ! {
 unsafe extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
     arch::early_cpu_init();
 
-    println!("ap_init (number {}, cpu {})", unsafe { (*info).processor_id }, arch::cpu_num());
+    println!(
+        "ap_init (number {}, cpu {})",
+        unsafe { (*info).processor_id },
+        arch::cpu_num()
+    );
 
     arch::long_jump(ap_main as usize)
 }

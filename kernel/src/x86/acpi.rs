@@ -14,15 +14,20 @@ impl acpi::AcpiHandler for AcpiHandler {
     ) -> PhysicalMapping<Self, T> {
         let offset = x86::direct_map_offset();
 
-        let virtual_pointer;
-        if physical_address < offset {
+        let virtual_pointer= if physical_address < offset {
             let virtual_address = physical_address + offset;
-            virtual_pointer = NonNull::new(virtual_address as *mut T).unwrap();
+            NonNull::new(virtual_address as *mut T).unwrap()
         } else {
-            virtual_pointer = NonNull::new(physical_address as *mut T).unwrap();
-        }
+            NonNull::new(physical_address as *mut T).unwrap()
+        };
 
-        return PhysicalMapping::new(physical_address, virtual_pointer, size, size, AcpiHandler);
+        PhysicalMapping::new(
+            physical_address,
+            virtual_pointer,
+            size,
+            size,
+            AcpiHandler
+        )
     }
 
     fn unmap_physical_region<T>(region: &PhysicalMapping<Self, T>) {}

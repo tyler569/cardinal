@@ -1,8 +1,8 @@
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
-pub struct PTE(pub u64);
+pub struct Pte(pub u64);
 
-impl PTE {
+impl Pte {
     pub const PRESENT: u64 = 0x01;
     pub const WRITEABLE: u64 = 0x02;
     pub const USERMODE: u64 = 0x04;
@@ -81,5 +81,5 @@ impl PTE {
 
 #[repr(align(4096))]
 pub struct PageTable {
-    entries: [PTE; 512],
+    entries: [Pte; 512],
 }

@@ -1,9 +1,9 @@
+use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::x86::gdt;
 use crate::x86::gdt::Tss;
-use core::arch::asm;
 use crate::NUM_CPUS;
-use crate::per_cpu::PerCpu;
+use core::arch::asm;
 
 pub fn cpuid(a: u32, c: u32) -> [u32; 4] {
     let mut result: [u32; 4] = [0; 4];
@@ -82,8 +82,10 @@ impl Cpu {
         self.stack = unsafe { &STACKS[cpu_num].0 } as *const _;
         self.df_stack = unsafe { &STACKS[cpu_num].1 } as *const _;
 
-        self.tss.set_kernel_stack(unsafe { (*self.stack).top() as u64 });
-        self.tss.set_df_stack(unsafe { (*self.df_stack).top() as u64 });
+        self.tss
+            .set_kernel_stack(unsafe { (*self.stack).top() as u64 });
+        self.tss
+            .set_df_stack(unsafe { (*self.df_stack).top() as u64 });
     }
 
     fn use_(&self) {

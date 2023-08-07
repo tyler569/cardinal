@@ -1,22 +1,25 @@
+use crate::executor::Executor;
+use crate::timer::Timer;
+use crate::{arch, NUM_CPUS};
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut, Index, IndexMut};
 use core::sync::atomic::AtomicU64;
 use spin::Lazy;
-use crate::{arch, NUM_CPUS};
-use crate::timer::Timer;
 
 pub struct PerCpu {
     this: *const UnsafeCell<Self>,
     pub arch: arch::Cpu,
     pub timer: Timer,
+    pub executor: Executor,
 }
 
 impl PerCpu {
     fn new() -> Self {
         Self {
-            this: 0 as *const _,
+            this: core::ptr::null(),
             arch: arch::Cpu::new(),
             timer: Timer::new(),
+            executor: Executor::new(),
         }
     }
 
@@ -70,4 +73,4 @@ impl IndexMut<usize> for PerCpuContainer {
 unsafe impl Send for PerCpuContainer {}
 unsafe impl Sync for PerCpuContainer {}
 
-static PER_CPU: Lazy<PerCpuContainer> = Lazy::new(|| PerCpuContainer::new());
+static PER_CPU: Lazy<PerCpuContainer> = Lazy::new(PerCpuContainer::new);

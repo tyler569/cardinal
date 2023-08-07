@@ -1,5 +1,5 @@
-use crate::{arch, timer};
 use crate::print::{print, println};
+use crate::{arch, timer};
 use core::future::Future;
 use core::pin::{pin, Pin};
 use core::task::Poll::{Pending, Ready};
@@ -27,7 +27,7 @@ pub fn run_async<T>(future: impl Future<Output = T>) -> T {
     let mut pinned = pin!(future);
     let mut result = pinned.as_mut().poll(&mut context);
 
-    while let Pending = result {
+    while result.is_pending() {
         result = pinned.as_mut().poll(&mut context);
     }
 
