@@ -25,5 +25,9 @@ qemu-system-x86_64 \
   -vga std \
   -display none \
   -smp 2 \
+  -m 128M \
+  -netdev user,id=nic \
+  -device rtl8139,netdev=nic \
+  -object filter-dump,id=f1,netdev=nic,file=nic.pcap \
   $stdio_usage \
   -no-reboot

@@ -4,7 +4,7 @@ use core::arch::asm;
 use core::marker::Sync;
 use core::ops::DerefMut;
 use core::sync::atomic::{AtomicBool, Ordering};
-use spin::once::Once;
+use spin::Lazy;
 
 mod acpi;
 mod context;
@@ -25,13 +25,15 @@ use crate::per_cpu::PerCpu;
 pub use context::Context;
 pub use cpu::{cpu_num, Cpu};
 pub use serial::SERIAL;
+use crate::pci::PciAddress;
 
-static DIRECT_MAP_OFFSET: Once<usize> = Once::new();
+static DIRECT_MAP_OFFSET: Lazy<usize> =
+    Lazy::new(|| unsafe { (**limine::HHDM.response.get()).offset } as usize);
 static SYSTEM_INIT_DONE: AtomicBool = AtomicBool::new(false);
 
 pub fn early_system_init() {
     if SYSTEM_INIT_DONE
-        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
         .is_err()
     {
         return;
@@ -43,15 +45,14 @@ pub fn early_system_init() {
 
         early_cpu_init();
 
-        let direct_map_offset = (**limine::HHDM.response.get()).offset;
-        DIRECT_MAP_OFFSET.call_once(|| direct_map_offset as usize);
-
         let acpi_tables = acpi::init();
         let platform_info = ::acpi::PlatformInfo::new(&acpi_tables).unwrap();
         if let ::acpi::platform::interrupt::InterruptModel::Apic(apic) =
             platform_info.interrupt_model
         {
             ioapic::init(&apic);
+        } else {
+            panic!("no IOAPIC found");
         }
 
         ioapic::unmask_irq(4);
@@ -72,11 +73,7 @@ pub unsafe fn long_jump(jump_to: usize) -> ! {
 }
 
 pub fn direct_map_offset() -> usize {
-    let Some(offset) = DIRECT_MAP_OFFSET.get() else {
-        panic!("Attempt to call direct_map without offset");
-    };
-
-    *offset
+    *DIRECT_MAP_OFFSET
 }
 
 pub fn direct_map<T>(ptr: *const T) -> *const T {
@@ -107,13 +104,6 @@ pub fn broadcast_ipi(vector: u8) {
     lapic::broadcast_ipi(vector);
 }
 
-pub fn sleep(duration: core::time::Duration) {
-    // manually calibrated
-    for _ in 0..duration.as_nanos() / 400 {
-        unsafe { asm!("pause") };
-    }
-}
-
 pub fn sleep_forever() -> ! {
     loop {
         unsafe { asm!("hlt") };
@@ -123,6 +113,22 @@ pub fn sleep_forever() -> ! {
 pub fn sleep_forever_no_irq() -> ! {
     loop {
         unsafe { asm!("cli", "hlt") };
+    }
+}
+
+pub fn pci_read(addr: PciAddress, offset: u8) -> u32 {
+    let addr = addr.to_u32() | (offset as u32 & 0xfc);
+    unsafe {
+        pio::write_u32(0xcf8, 0x80000000 | addr);
+        pio::read_u32(0xcfc)
+    }
+}
+
+pub fn pci_write(addr: PciAddress, offset: u8, value: u32) {
+    let addr = addr.to_u32() | (offset as u32 & 0xfc);
+    unsafe {
+        pio::write_u32(0xcf8, 0x80000000 | addr);
+        pio::write_u32(0xcfc, value);
     }
 }
 

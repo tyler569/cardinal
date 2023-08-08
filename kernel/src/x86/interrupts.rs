@@ -1,5 +1,6 @@
 use crate::per_cpu::PerCpu;
 use crate::print::println;
+use crate::x86;
 use crate::x86::cpu::cpu_num;
 use crate::x86::frame::InterruptFrame;
 use crate::x86::{lapic, SERIAL};
@@ -8,7 +9,6 @@ use core::cell::UnsafeCell;
 use core::ops::Deref;
 use core::sync::atomic::{AtomicU64, Ordering};
 use spin::Lazy;
-use crate::x86;
 
 pub unsafe fn enable_interrupts() {
     asm!("cli");
@@ -64,10 +64,6 @@ fn handle_ipi(frame: &mut InterruptFrame) {
     println!("CPU {} IPI", cpu_num());
 
     lapic::eoi();
-
-    // let destination = if cpu_num() == 1 { 0 } else { 1 };
-    // x86::sleep(core::time::Duration::from_secs(1));
-    // x86::send_ipi(destination, 129);
 }
 
 fn handle_ipi_panic(frame: &mut InterruptFrame) {

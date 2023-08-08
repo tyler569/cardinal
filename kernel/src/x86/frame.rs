@@ -30,24 +30,24 @@ pub struct InterruptFrame {
 
 impl core::fmt::Display for InterruptFrame {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        write!(
+        writeln!(
             f,
-            "ax {:016x} bx {:016x} cx {:016x} dx {:016x}\n",
+            "ax {:016x} bx {:016x} cx {:016x} dx {:016x}",
             self.rax, self.rbx, self.rcx, self.rdx
         )?;
-        write!(
+        writeln!(
             f,
-            "sp {:016x} bp {:016x} si {:016x} di {:016x}\n",
+            "sp {:016x} bp {:016x} si {:016x} di {:016x}",
             self.user_sp, self.rbp, self.rsi, self.rdi
         )?;
-        write!(
+        writeln!(
             f,
-            " 8 {:016x}  9 {:016x} 10 {:016x} 11 {:016x}\n",
+            " 8 {:016x}  9 {:016x} 10 {:016x} 11 {:016x}",
             self.r8, self.r9, self.r10, self.r11
         )?;
-        write!(
+        writeln!(
             f,
-            "12 {:016x} 13 {:016x} 14 {:016x} 15 {:016x}\n",
+            "12 {:016x} 13 {:016x} 14 {:016x} 15 {:016x}",
             self.r12, self.r13, self.r14, self.r15
         )?;
         write!(

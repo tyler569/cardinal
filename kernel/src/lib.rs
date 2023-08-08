@@ -17,7 +17,10 @@ mod async_test;
 mod executor;
 mod limine;
 mod mem;
+mod net;
+mod pci;
 mod per_cpu;
+mod pmm;
 mod print;
 mod thread;
 mod timer;
@@ -35,6 +38,7 @@ pub unsafe extern "C" fn kernel_init() -> ! {
     mem::static_heap_init();
     PerCpu::init();
     arch::early_system_init();
+    pmm::init();
     arch::long_jump(kernel_main as usize)
 }
 
@@ -43,7 +47,7 @@ unsafe extern "C" fn kernel_main() -> ! {
 
     // limine_info();
 
-    start_ap();
+    start_aps();
 
     arch::enable_interrupts();
 
@@ -64,18 +68,25 @@ unsafe extern "C" fn kernel_main() -> ! {
     println!("spawning serial task");
     executor::spawn(async {
         loop {
-            let c = SERIAL.read();
-            let c = c.await;
-            print!("{}", c as char);
+            print!("{}", SERIAL.read().await as char);
         }
     });
 
     executor::spawn(async {
         loop {
-            executor::sleep::sleep(Duration::from_millis(3000)).await;
+            executor::sleep::sleep(Duration::from_secs(3)).await;
             panic!();
         }
     });
+
+    pci::enumerate_pci_bus();
+
+    println!("allocating a page: {:x?}", pmm::alloc());
+    println!("allocating a page: {:x?}", pmm::alloc());
+    println!("allocating 16 pages: {:x?}", pmm::alloc_contiguous(16));
+    println!("allocating 16 pages: {:x?}", pmm::alloc_contiguous(16));
+    pmm::summary();
+
 
     loop {
         PerCpu::get_mut().executor.do_work();
@@ -131,11 +142,10 @@ unsafe fn limine_info() {
     }
 }
 
-unsafe fn start_ap() {
+unsafe fn start_aps() {
     let smp = &**limine::SMP.response.get();
-    let Some(cpu) = smp.cpus_slice().get(1) else {
-        return;
-    };
 
-    (**cpu).goto_address = ap_init;
+    for cpu in smp.cpus_slice().iter().skip(1) {
+        (**cpu).goto_address = ap_init;
+    }
 }

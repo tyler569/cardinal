@@ -56,9 +56,7 @@ impl SerialPort {
     }
 
     pub fn read(&self) -> SerialPortReadFuture {
-        SerialPortReadFuture {
-            port: self.port,
-        }
+        SerialPortReadFuture { port: self.port }
     }
 }
 
