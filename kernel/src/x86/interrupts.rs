@@ -8,6 +8,7 @@ use core::cell::UnsafeCell;
 use core::ops::Deref;
 use core::sync::atomic::{AtomicU64, Ordering};
 use spin::Lazy;
+use crate::x86;
 
 pub unsafe fn enable_interrupts() {
     asm!("cli");
@@ -24,6 +25,7 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
         32..=47 => handle_irq(&mut *frame),
         128 => handle_syscall(&mut *frame),
         129 => handle_ipi(&mut *frame),
+        130 => handle_ipi_panic(&mut *frame),
         _ => unexpected_interrupt(&*frame),
     }
 }
@@ -66,6 +68,11 @@ fn handle_ipi(frame: &mut InterruptFrame) {
     // let destination = if cpu_num() == 1 { 0 } else { 1 };
     // x86::sleep(core::time::Duration::from_secs(1));
     // x86::send_ipi(destination, 129);
+}
+
+fn handle_ipi_panic(frame: &mut InterruptFrame) {
+    println!("CPU {} stopping due to panic on another CPU", cpu_num());
+    x86::sleep_forever_no_irq();
 }
 
 fn unexpected_interrupt(frame: &InterruptFrame) {

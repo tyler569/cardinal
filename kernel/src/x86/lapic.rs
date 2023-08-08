@@ -39,6 +39,14 @@ pub fn send_ipi(apic_id: u8, vector: u8) {
     }
 }
 
+pub fn broadcast_ipi(vector: u8) {
+    unsafe {
+        // send ipi to all other CPUS except self
+        write(0x310, 0);
+        write(0x300, vector as u32 | 1 << 14 | 3 << 18);
+    }
+}
+
 pub fn start_timer() {
     println!("starting timer");
     unsafe {

@@ -84,3 +84,7 @@ fn new_waker(id: usize) -> core::task::Waker {
     let raw_waker = RawWaker::new(id as *const (), &WAKER_VTABLE);
     unsafe { core::task::Waker::from_raw(raw_waker) }
 }
+
+pub fn spawn(future: impl Future<Output = ()> + 'static) {
+    PerCpu::get_mut().executor.spawn(future);
+}

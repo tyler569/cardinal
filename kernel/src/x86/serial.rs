@@ -97,7 +97,6 @@ impl Future for SerialPortReadFuture {
     type Output = u8;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        // println!("[async serial] poll");
         let mut queue = SERIAL.queue.lock();
         match queue.pop_front() {
             Some(b'\r') => Poll::Ready(b'\n'),

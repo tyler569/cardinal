@@ -143,6 +143,7 @@ pub(super) unsafe fn system_init() {
     IDT[47] = IdtEntry::new(irq15, 0, 0, GateType::InterruptGate);
     IDT[128] = IdtEntry::new(isr_syscall, 0, 0, GateType::InterruptGate);
     IDT[129] = IdtEntry::new(isr_ipi, 0, 0, GateType::InterruptGate);
+    IDT[130] = IdtEntry::new(isr_ipi_panic, 0, 0, GateType::InterruptGate);
 }
 
 pub(super) unsafe fn load() {
@@ -281,3 +282,4 @@ isr_no_error!(irq14, 46);
 isr_no_error!(irq15, 47);
 isr_no_error!(isr_syscall, 128);
 isr_no_error!(isr_ipi, 129);
+isr_no_error!(isr_ipi_panic, 130);

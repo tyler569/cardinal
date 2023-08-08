@@ -103,6 +103,10 @@ pub fn send_ipi(cpu_id: u8, vector: u8) {
     lapic::send_ipi(cpu_id, vector);
 }
 
+pub fn broadcast_ipi(vector: u8) {
+    lapic::broadcast_ipi(vector);
+}
+
 pub fn sleep(duration: core::time::Duration) {
     // manually calibrated
     for _ in 0..duration.as_nanos() / 400 {

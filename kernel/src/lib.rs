@@ -54,7 +54,7 @@ unsafe extern "C" fn kernel_main() -> ! {
     // println!("async result: {}", res);
 
     println!("spawning sleep task");
-    PerCpu::get_mut().executor.spawn(async {
+    executor::spawn(async {
         loop {
             executor::sleep::sleep(Duration::from_millis(300)).await;
             print!(".")
@@ -62,11 +62,18 @@ unsafe extern "C" fn kernel_main() -> ! {
     });
 
     println!("spawning serial task");
-    PerCpu::get_mut().executor.spawn(async {
+    executor::spawn(async {
         loop {
             let c = SERIAL.read();
             let c = c.await;
             print!("{}", c as char);
+        }
+    });
+
+    executor::spawn(async {
+        loop {
+            executor::sleep::sleep(Duration::from_millis(3000)).await;
+            panic!();
         }
     });
 
@@ -97,6 +104,8 @@ unsafe fn ap_main() -> ! {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
+    arch::broadcast_ipi(130);
+
     println!("PANIC: {}", info);
 
     arch::sleep_forever_no_irq()
