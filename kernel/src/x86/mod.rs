@@ -58,6 +58,10 @@ pub fn early_system_init() {
         ioapic::unmask_irq(4);
 
         // acpi_debug();
+
+        let root = page::get_vm_root();
+        println!("VM root: {:#x}", root as usize);
+        // page::print_page_table(root);
     }
 }
 

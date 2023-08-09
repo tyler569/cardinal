@@ -1,8 +1,10 @@
 use core::cell::UnsafeCell;
+use core::ffi::c_char;
 
 pub mod boot_info;
 pub mod hhdm;
 pub mod mmap;
+pub mod module;
 pub mod rsdp;
 pub mod smp;
 
@@ -14,3 +16,4 @@ pub static HHDM: hhdm::LimineHhdm = hhdm::LimineHhdm::new();
 pub static MMAP: mmap::LimineMmap = mmap::LimineMmap::new();
 pub static RSDP: rsdp::LimineRsdp = rsdp::LimineRsdp::new();
 pub static SMP: smp::LimineSmp = smp::LimineSmp::new(0);
+pub static MODULE: module::LimineModule = module::LimineModule::new();

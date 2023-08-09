@@ -77,7 +77,6 @@ unsafe fn exec_wake_by_ref(data: *const ()) {
 
 unsafe fn exec_drop(data: *const ()) {
     // println!("[async] exec_drop");
-    // let _executor = Box::from_raw(data as *mut Executor);
 }
 
 fn new_waker(id: usize) -> core::task::Waker {

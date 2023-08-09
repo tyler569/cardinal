@@ -19,11 +19,12 @@ while getopts ":im" opt; do
   esac
 done
 
+#  -display none \
+
 # shellcheck disable=SC2086
 qemu-system-x86_64 \
   -cdrom ./cardinal3.iso \
   -vga std \
-  -display none \
   -smp 2 \
   -m 128M \
   -netdev user,id=nic \

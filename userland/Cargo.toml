@@ -1,5 +1,5 @@
 [package]
-name = "cardinal3-kernel"
+name = "cardinal3-userland"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,10 +9,7 @@ edition = "2021"
 crate-type = ["staticlib"]
 
 [dependencies]
-spin = "0.9.8"
-acpi = "4.1.1"
-array-init = "2.1.0"
-elf = { version = "0.7.2", default-features = false }
+cardinal3-interface = { path = "../interface" }
 
 [profile.dev]
 opt-level = 1

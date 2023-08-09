@@ -11,6 +11,7 @@ extern crate alloc;
 use core::arch::asm;
 use core::pin::pin;
 use core::time::Duration;
+use elf::endian::LittleEndian;
 
 mod allocator;
 mod async_test;
@@ -81,11 +82,17 @@ unsafe extern "C" fn kernel_main() -> ! {
 
     pci::enumerate_pci_bus();
 
-    println!("allocating a page: {:x?}", pmm::alloc());
-    println!("allocating a page: {:x?}", pmm::alloc());
-    println!("allocating 16 pages: {:x?}", pmm::alloc_contiguous(16));
-    println!("allocating 16 pages: {:x?}", pmm::alloc_contiguous(16));
-    pmm::summary();
+    let mods_info = &**limine::MODULE.response.get();
+    println!("mods_info: {:#?}", mods_info);
+    let mod_info = &*mods_info.modules_slice()[0];
+    println!("mod_info: {:#?}", mod_info);
+    let mod_data = core::ptr::slice_from_raw_parts(
+        mod_info.address,
+        mod_info.size as usize,
+    );
+
+    let e = elf::ElfBytes::<LittleEndian>::minimal_parse(&*mod_data).unwrap();
+    println!("entrypoint: {:#?}", e.ehdr.e_entry);
 
 
     loop {

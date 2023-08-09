@@ -1,3 +1,7 @@
+use core::arch::asm;
+use crate::print::println;
+use crate::x86;
+
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
 pub struct Pte(pub u64);
@@ -71,15 +75,81 @@ impl Pte {
     }
 
     pub fn next_table(&self) -> *const PageTable {
-        core::ptr::null()
+        x86::direct_map(self.address() as *const PageTable)
     }
 
     pub fn next_table_mut(&mut self) -> *mut PageTable {
-        core::ptr::null_mut()
+        self.next_table() as *mut PageTable
     }
 }
 
 #[repr(align(4096))]
 pub struct PageTable {
     entries: [Pte; 512],
+}
+
+pub fn get_vm_root() -> *mut PageTable {
+    let vm_root;
+    unsafe {
+        asm!(
+            "mov {}, cr3",
+            out(reg) vm_root,
+        );
+    }
+    x86::direct_map_mut(vm_root)
+}
+
+pub fn print_page_table(root: *const PageTable) {
+    print_page_table_level(root, 4, 0);
+}
+
+fn print_page_table_level(root: *const PageTable, level: i32, addr: u64) {
+    let root = unsafe { &*root };
+    for (i, entry) in root.entries.iter().enumerate() {
+        let mut addr = addr | (i as u64) << (12 + (level - 1) * 9);
+        if addr & 0x0000_8000_0000_0000 != 0 {
+            addr |= 0xFFFF_0000_0000_0000;
+        }
+        if entry.is_present() {
+            println!("Entry {:#018x}: {:#012x}", addr, entry.address());
+            if level > 1 && !entry.is_huge() {
+                println!("Entry {:#018x}: {:#012x}", addr, entry.address());
+                print_page_table_level(entry.next_table(), level - 1, addr);
+            }
+        }
+    }
+}
+
+pub fn map(root: *mut PageTable, virt: u64, phys: u64, flags: u64) {
+    let mut root = unsafe { &mut *root };
+    let p4_index = (virt >> 39) & 0x1ff;
+    let p3_index = (virt >> 30) & 0x1ff;
+    let p2_index = (virt >> 21) & 0x1ff;
+    let p1_index = (virt >> 12) & 0x1ff;
+
+    let table_flags = Pte::PRESENT |
+        Pte::WRITEABLE |
+        if flags & Pte::USERMODE != 0 { Pte::USERMODE } else { 0 };
+
+    unsafe {
+        if !root.entries[p4_index as usize].is_present() {
+            let table = crate::pmm::alloc_zeroed().unwrap();
+            (*root).entries[p4_index as usize].set(table as u64, table_flags);
+        }
+
+        let p3_table = (*root).entries[p4_index as usize].next_table_mut();
+        if !(*p3_table).entries[p3_index as usize].is_present() {
+            let table = crate::pmm::alloc_zeroed().unwrap();
+            (*p3_table).entries[p3_index as usize].set(table as u64, table_flags);
+        }
+
+        let p2_table = (*p3_table).entries[p3_index as usize].next_table_mut();
+        if !(*p2_table).entries[p2_index as usize].is_present() {
+            let table = crate::pmm::alloc_zeroed().unwrap();
+            (*p2_table).entries[p2_index as usize].set(table as u64, table_flags);
+        }
+
+        let p1_table = (*p2_table).entries[p2_index as usize].next_table_mut();
+        (*p1_table).entries[p1_index as usize].set(phys, flags | Pte::PRESENT);
+    }
 }

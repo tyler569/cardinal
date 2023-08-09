@@ -5,9 +5,13 @@
       <sourceFolder url="file://$MODULE_DIR$/allocator/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/kernel/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/interface/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/userland/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/allocator/target" />
       <excludeFolder url="file://$MODULE_DIR$/kernel/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
+      <excludeFolder url="file://$MODULE_DIR$/interface/target" />
+      <excludeFolder url="file://$MODULE_DIR$/userland/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

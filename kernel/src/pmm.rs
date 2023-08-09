@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 use spin::{Lazy, Mutex};
-use crate::limine;
+use crate::{arch, limine};
 use crate::limine::mmap::{LimineMmapEntry, LimineMmapEntryType};
 use crate::print::println;
 
@@ -73,6 +73,22 @@ pub fn alloc() -> Option<usize> {
         if let PageInfo::Free = page {
             *page = PageInfo::InUse { refcount: 1 };
             return Some(i * 4096);
+        }
+    }
+    None
+}
+
+pub fn alloc_zeroed() -> Option<usize> {
+    let mut page_info = PAGE_INFO.lock();
+    for (i, page) in page_info.iter_mut().enumerate() {
+        if let PageInfo::Free = page {
+            *page = PageInfo::InUse { refcount: 1 };
+            let ptr = i * 4096;
+            let mapped_ptr = arch::direct_map_mut(ptr as *mut u8);
+            unsafe {
+                core::ptr::write_bytes(mapped_ptr, 0, 4096);
+            }
+            return Some(ptr);
         }
     }
     None
