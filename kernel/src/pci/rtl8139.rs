@@ -10,6 +10,8 @@ pub struct Rtl8139 {
     io_size: usize,
     irq: u8,
     mac: MacAddress,
+
+    tx_slot: usize,
 }
 
 impl Rtl8139 {
@@ -48,23 +50,33 @@ impl Rtl8139 {
             io_size: io_size as usize,
             irq,
             mac: MacAddress::new(mac),
+            tx_slot: 0,
         }
     }
 
-    pub fn io_read_u32(&self, offset: usize) -> u32 {
-        unsafe { ((self.io_base + offset) as *const u32).read_volatile() }
+
+    pub unsafe fn io_read_u8(&self, offset: usize) -> u8 {
+        ((self.io_base + offset) as *const u8).read_volatile()
     }
 
-    pub fn io_write_u32(&self, offset: usize, value: u32) {
-        unsafe { ((self.io_base + offset) as *mut u32).write_volatile(value) }
+    pub unsafe fn io_write_u8(&self, offset: usize, value: u8) {
+        ((self.io_base + offset) as *mut u8).write_volatile(value)
     }
 
-    pub fn io_read_u8(&self, offset: usize) -> u8 {
-        unsafe { ((self.io_base + offset) as *const u8).read_volatile() }
+    pub unsafe fn io_read_u16(&self, offset: usize) -> u16 {
+        ((self.io_base + offset) as *const u16).read_volatile()
     }
 
-    pub fn io_write_u8(&self, offset: usize, value: u8) {
-        unsafe { ((self.io_base + offset) as *mut u8).write_volatile(value) }
+    pub unsafe fn io_write_u16(&self, offset: usize, value: u16) {
+        ((self.io_base + offset) as *mut u16).write_volatile(value)
+    }
+
+    pub unsafe fn io_read_u32(&self, offset: usize) -> u32 {
+        ((self.io_base + offset) as *const u32).read_volatile()
+    }
+
+    pub unsafe fn io_write_u32(&self, offset: usize, value: u32) {
+        ((self.io_base + offset) as *mut u32).write_volatile(value)
     }
 
     pub fn init(&mut self) {
@@ -72,14 +84,61 @@ impl Rtl8139 {
     }
 
     pub fn reset(&mut self) {
-        // enable bus mastering
-        let bus_state = arch::pci_read(self.address, 0x4);
-        arch::pci_write(self.address, 0x4, bus_state | 0x4);
+        unsafe {
+            // enable bus mastering
+            let bus_state = arch::pci_read(self.address, 0x4);
+            arch::pci_write(self.address, 0x4, bus_state | 0x4);
 
-        self.io_write_u8(0x52, 0x0); // power on
-        self.io_write_u8(0x37, 0x10); // reset
-        while self.io_read_u8(0x37) & 0x10 != 0 {} // wait for reset
+            self.io_write_u8(0x52, 0x0); // power on
+            self.io_write_u8(0x37, 0x10); // reset
+            while self.io_read_u8(0x37) & 0x10 != 0 {} // wait for reset
 
-        println!("RTL8139 reset");
+            println!("RTL8139 reset");
+
+            let ring_phy = crate::pmm::alloc_contiguous(16).unwrap();
+            let ring_mapped = ring_phy + arch::direct_map_offset();
+
+            self.io_write_u32(0x30, ring_phy as u32); // ring buffer
+            self.io_write_u16(0x3c, 0x0005); // configure interrupts and txok, rxok
+
+            self.io_write_u32(0x40, 0x600); // send larger DMA bursts
+            self.io_write_u32(0x44, 0x68f); // accept all packets + unlimited DMA
+
+            self.io_write_u8(0x37, 0x0c); // enable rx and tx
+            self.tx_slot = 0;
+        }
+    }
+
+    pub fn send_packet(&mut self, data: &[u8]) {
+        unsafe {
+            if data.len() > 1500 {
+                panic!("Tried to send oversize packet on rtl8139");
+            }
+
+            let Some(phy_data) = arch::physical_address(data.as_ptr() as usize) else {
+                println!("rtl8139 attempted to send packet from unmapped region");
+                return;
+            };
+            if phy_data > 0xffff_ffff {
+                println!("rtl8139 can't send packets from above physical 4G");
+                return;
+            }
+            let tx_addr_off = 0x20 + self.tx_slot * 4;
+            let ctrl_reg_off = 0x10 + self.tx_slot * 4;
+
+            self.io_write_u32(tx_addr_off, phy_data as u32);
+            self.io_write_u32(ctrl_reg_off, data.len() as u32);
+
+            // TODO: async this and check when we get back around to the slot
+
+            // await device taking packet
+            while self.io_read_u32(ctrl_reg_off) & 0x100 != 0 {}
+            // await send confirmation
+            while self.io_read_u32(ctrl_reg_off) & 0x400 != 0 {}
+
+            self.tx_slot += 1;
+            self.tx_slot %= 4;
+        }
+
     }
 }

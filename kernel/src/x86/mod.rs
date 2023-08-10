@@ -22,10 +22,11 @@ mod pio;
 mod serial;
 
 use crate::per_cpu::PerCpu;
+use crate::pci::PciAddress;
 pub use context::Context;
 pub use cpu::{cpu_num, Cpu};
+pub use page::physical_address;
 pub use serial::SERIAL;
-use crate::pci::PciAddress;
 
 static DIRECT_MAP_OFFSET: Lazy<usize> =
     Lazy::new(|| unsafe { (**limine::HHDM.response.get()).offset } as usize);
@@ -118,6 +119,10 @@ pub fn sleep_forever_no_irq() -> ! {
     loop {
         unsafe { asm!("cli", "hlt") };
     }
+}
+
+pub fn sleep_until_interrupt() {
+    unsafe { asm!("hlt") };
 }
 
 pub fn pci_read(addr: PciAddress, offset: u8) -> u32 {

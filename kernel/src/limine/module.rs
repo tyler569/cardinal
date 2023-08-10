@@ -73,4 +73,8 @@ impl LimineFile {
     pub fn cmdline(&self) -> &CStr {
         unsafe { CStr::from_ptr(self.cmdline) }
     }
+
+    pub fn data(&self) -> *const [u8] {
+        unsafe { core::slice::from_raw_parts(self.address, self.size as usize) }
+    }
 }

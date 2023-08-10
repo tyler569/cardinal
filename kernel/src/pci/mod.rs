@@ -3,7 +3,7 @@ use crate::arch;
 use crate::pci::rtl8139::Rtl8139;
 use crate::print::println;
 
-mod rtl8139;
+pub mod rtl8139;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PciAddress {
@@ -39,13 +39,36 @@ impl Display for PciAddress {
 }
 
 pub fn enumerate_pci_bus() {
-    for bus in 0..255 {
+    for bus in 0..2 {
         for slot in 0..255 {
             for function in 0..8 {
                 print_device_info(PciAddress::new(bus, slot, function));
             }
         }
     }
+}
+
+pub fn find_device(vendor_id: u16, device_id: u16) -> Option<PciAddress> {
+    for bus in 0..2 {
+        for slot in 0..255 {
+            for function in 0..8 {
+                let address = PciAddress::new(bus, slot, function);
+                let base = arch::pci_read(address, 0);
+                if base == 0xffff_ffff {
+                    continue;
+                }
+
+                let pci_vendor_id = base & 0xffff;
+                let pci_device_id = (base >> 16) & 0xffff;
+
+                if pci_vendor_id as u16 == vendor_id && pci_device_id as u16 == device_id {
+                    return Some(address);
+                }
+            }
+        }
+    }
+
+    None
 }
 
 fn print_device_info(address: PciAddress) {
@@ -67,9 +90,4 @@ fn print_device_info(address: PciAddress) {
         address, vendor_id, device_id,
         class, subclass, prog_if, revision,
     );
-
-    if vendor_id as u16 == Rtl8139::VENDOR_ID && device_id as u16 == Rtl8139::DEVICE_ID {
-        let rtl8139 = Rtl8139::new(address);
-        println!("  RTL8139: {:?}", rtl8139);
-    }
 }

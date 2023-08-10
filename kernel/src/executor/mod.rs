@@ -8,6 +8,7 @@ use core::pin::Pin;
 use core::sync::atomic::AtomicBool;
 use core::task::{Context, Poll, RawWaker, RawWakerVTable};
 use spin::Mutex;
+use crate::arch;
 
 pub mod sleep;
 
@@ -86,4 +87,14 @@ fn new_waker(id: usize) -> core::task::Waker {
 
 pub fn spawn(future: impl Future<Output = ()> + 'static) {
     PerCpu::get_mut().executor.spawn(future);
+}
+
+pub fn work_forever() -> ! {
+    loop {
+        PerCpu::get_mut().executor.do_work();
+
+        // consider scheduling usermode process
+
+        arch::sleep_until_interrupt();
+    }
 }

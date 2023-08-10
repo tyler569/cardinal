@@ -1,24 +1,25 @@
-use core::fmt::{Debug, Display};
+mod ethernet;
+mod ipv4;
+mod icmp;
+mod packet;
 
-pub struct MacAddress([u8; 6]);
+pub use ethernet::MacAddress;
+pub use ethernet::EthernetHeader;
+pub use ipv4::Ipv4Address;
+pub use ipv4::Ipv4Header;
+pub use ipv4::Ipv4Protocol;
+pub use icmp::IcmpHeader;
+pub use packet::Packet;
 
-impl MacAddress {
-    pub fn new(bytes: [u8; 6]) -> Self {
-        Self(bytes)
-    }
-}
+pub trait Header: Sized {
+    fn compute_checksum(&mut self, data: &[u8]);
 
-impl Debug for MacAddress {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "MacAddress({})", self)
-    }
-}
-
-impl Display for MacAddress {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-            self.0[0], self.0[1], self.0[2],
-            self.0[3], self.0[4], self.0[5],
-        )
+    fn as_bytes(&self) -> &[u8] {
+        unsafe {
+            core::slice::from_raw_parts(
+                self as *const Self as *const u8,
+                core::mem::size_of::<Self>(),
+            )
+        }
     }
 }

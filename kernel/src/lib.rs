@@ -73,6 +73,7 @@ unsafe extern "C" fn kernel_main() -> ! {
         }
     });
 
+    println!("spawning panic task");
     executor::spawn(async {
         loop {
             executor::sleep::sleep(Duration::from_secs(3)).await;
@@ -81,26 +82,34 @@ unsafe extern "C" fn kernel_main() -> ! {
     });
 
     pci::enumerate_pci_bus();
+    if let Some(rtl_addr) = pci::find_device(0x10ec, 0x8139) {
+        println!("found rtl8139 at {}", rtl_addr);
+        let mut rtl_device = pci::rtl8139::Rtl8139::new(rtl_addr);
+        rtl_device.init();
 
-    let mods_info = &**limine::MODULE.response.get();
-    println!("mods_info: {:#?}", mods_info);
-    let mod_info = &*mods_info.modules_slice()[0];
-    println!("mod_info: {:#?}", mod_info);
-    let mod_data = core::ptr::slice_from_raw_parts(
-        mod_info.address,
-        mod_info.size as usize,
-    );
-
-    let e = elf::ElfBytes::<LittleEndian>::minimal_parse(&*mod_data).unwrap();
-    println!("entrypoint: {:#?}", e.ehdr.e_entry);
-
-
-    loop {
-        PerCpu::get_mut().executor.do_work();
-        asm!("hlt");
+        rtl_device.send_packet(&[0x00, 0x11, 0x22, 0x33, 0x44]);
+        rtl_device.send_packet(&[0x00, 0x11, 0x22, 0x33, 0x44]);
+        rtl_device.send_packet(&[0x00, 0x11, 0x22, 0x33, 0x44]);
+        rtl_device.send_packet(&[0x00, 0x11, 0x22, 0x33, 0x44]);
+        rtl_device.send_packet(&[0x00, 0x11, 0x22, 0x33, 0x44]);
+        rtl_device.send_packet(&[0x00, 0x11, 0x22, 0x33, 0x44]);
+        rtl_device.send_packet(&[0x00, 0x11, 0x22, 0x33, 0x44]);
     }
 
-    arch::sleep_forever()
+    let mods_info = &**limine::MODULE.response.get();
+    let mod_info = &*mods_info.modules_slice()[0];
+    let mod_data = mod_info.data();
+
+    let efile = elf::ElfBytes::<LittleEndian>::minimal_parse(&*mod_data).unwrap();
+    let segments = efile.segments().unwrap();
+    for header in segments {
+        if header.p_type == elf::abi::PT_LOAD {
+            println!("load offset {:#x} size {:#x} to {:#x}", header.p_offset, header.p_filesz, header.p_vaddr);
+        }
+    }
+    println!("jump to entrypoint {:#x}", efile.ehdr.e_entry);
+
+    executor::work_forever()
 }
 
 unsafe extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
@@ -117,7 +126,7 @@ unsafe extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
 
 unsafe fn ap_main() -> ! {
     arch::enable_interrupts();
-    arch::sleep_forever()
+    executor::work_forever()
 }
 
 #[panic_handler]
