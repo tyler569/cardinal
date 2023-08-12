@@ -1,4 +1,5 @@
 #![no_std]
+#![no_main]
 #![allow(unused)]
 #![feature(naked_functions)]
 #![feature(allocator_api)]
@@ -24,6 +25,7 @@ mod pmm;
 mod print;
 mod timer;
 mod x86;
+mod syscalls;
 
 use crate::arch::SERIAL;
 use crate::per_cpu::PerCpu;

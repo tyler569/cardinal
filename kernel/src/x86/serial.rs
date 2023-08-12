@@ -87,6 +87,7 @@ impl core::fmt::Write for SerialPortWriter {
     }
 }
 
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct SerialPortReadFuture {
     port: u16,
 }

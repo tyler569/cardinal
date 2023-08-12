@@ -1,6 +1,5 @@
 use crate::limine;
 use crate::pci::PciAddress;
-use crate::per_cpu::PerCpu;
 use crate::print::println;
 use core::arch::asm;
 use core::marker::Sync;
@@ -24,10 +23,11 @@ mod pio;
 mod serial;
 
 pub use context::Context;
-pub use cpu::{cpu_num, Cpu, kernel_stack};
+pub use cpu::{Cpu, cpu_num, kernel_stack};
 pub use long_jump::{long_jump, long_jump_usermode};
-pub use page::{Pte, map, physical_address};
+pub use page::{map, physical_address, Pte};
 pub use serial::SERIAL;
+pub use frame::InterruptFrame;
 
 static DIRECT_MAP_OFFSET: Lazy<usize> =
     Lazy::new(|| unsafe { (**limine::HHDM.response.get()).offset } as usize);

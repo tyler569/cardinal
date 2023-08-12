@@ -1,15 +1,12 @@
 use core::arch::asm;
 use cardinal3_interface::Syscall;
 
-fn syscall(number: Syscall, arg0: usize, arg1: usize, arg2: usize) -> usize {
+fn syscall(args: &Syscall) -> usize {
     let result: usize;
     unsafe {
         asm!(
             "int 0x80",
-            inout("rax") number as usize => result,
-            in("r9") arg0,
-            in("rcx") arg1,
-            in("rdx") arg2,
+            inout("rax") args as *const _ as usize => result,
             options(nostack)
         );
     }
@@ -17,6 +14,10 @@ fn syscall(number: Syscall, arg0: usize, arg1: usize, arg2: usize) -> usize {
 }
 
 pub fn print(string: &str) -> usize {
-    let args = cardinal3_interface::PrintArgs { data: string.as_bytes() };
-    syscall(Syscall::Print, &args as *const _ as usize, 0, 0)
+    syscall(&Syscall::Print(string))
+}
+
+pub fn exit() -> ! {
+    syscall(&Syscall::Exit(0));
+    unreachable!();
 }

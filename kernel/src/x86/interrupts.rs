@@ -88,18 +88,8 @@ fn handle_serial(frame: &mut InterruptFrame) {
 }
 
 fn handle_syscall(frame: &mut InterruptFrame) {
-    println!("syscall: {}", frame.rax);
-    println!("{}", frame);
-
-    match frame.rax {
-        0 => unsafe {
-            let args = frame.r9 as *const cardinal3_interface::PrintArgs;
-            let data = (*args).data;
-            let str = core::str::from_utf8_unchecked(&*data);
-            print!("usermode message: {}", str);
-        }
-        _ => println!("CPU {} Unhandled syscall {}", cpu_num(), frame.rax),
-    }
+    println!("syscall: {:x}", frame.rax);
+    crate::syscalls::handle_syscall(frame);
 }
 
 fn handle_ipi(frame: &mut InterruptFrame) {

@@ -3,29 +3,22 @@
 set -euo pipefail
 set -x
 
+# Prevent macos from creating phantom metadata files in tar archives
+# https://unix.stackexchange.com/a/9865
+export COPYFILE_DISABLE=1
+
 iso_name="cardinal3.iso"
 kernel_file="cardinal3"
 
 mkdir -p build
 build_dir="$(pwd)/build"
 
-cd userland
-cargo build
-ld.lld -o "$build_dir/userland" \
-    target/x86_64-unknown-none/debug/libcardinal3_userland.a
-cd ..
+cargo -Zunstable-options -Zbuild-std -C userland build
+cp userland/target/x86_64-unknown-none/debug/print "$build_dir"/userland
 
-cd kernel
-mkdir -p build
 
-# Prevent macos from creating phantom metadata files in tar archives
-# https://unix.stackexchange.com/a/9865
-export COPYFILE_DISABLE=1
-
-cargo build
-ld.lld -o "$build_dir/$kernel_file" \
-    target/x86_64-unknown-none/debug/libcardinal3_kernel.a \
-    -T link.ld -z max-page-size=0x1000
+cargo -Zunstable-options -C kernel build
+cp kernel/target/x86_64-unknown-none/debug/cardinal3-kernel "$build_dir"/cardinal3
 
 cd "$build_dir"
 

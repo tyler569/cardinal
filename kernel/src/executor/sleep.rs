@@ -4,6 +4,8 @@ use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 
+#[derive(Debug)]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 struct Sleep {
     until: u64,
 }
