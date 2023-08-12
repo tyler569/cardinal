@@ -82,10 +82,8 @@ impl Cpu {
         self.stack = unsafe { &STACKS[cpu_num].0 } as *const _;
         self.df_stack = unsafe { &STACKS[cpu_num].1 } as *const _;
 
-        self.tss
-            .set_kernel_stack(unsafe { (*self.stack).top() as u64 });
-        self.tss
-            .set_df_stack(unsafe { (*self.df_stack).top() as u64 });
+        self.tss.set_kernel_stack(unsafe { (*self.stack).top() as u64 });
+        self.tss.set_df_stack(unsafe { (*self.df_stack).top() as u64 });
     }
 
     fn use_(&self) {
@@ -124,6 +122,6 @@ pub(crate) unsafe fn use_() {
     );
 }
 
-pub(crate) fn kernel_stack() -> u64 {
+pub fn kernel_stack() -> u64 {
     PerCpu::get_mut().arch.tss.kernel_stack()
 }

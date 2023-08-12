@@ -67,18 +67,18 @@ pub fn init() {
     }
 }
 
-pub fn alloc() -> Option<usize> {
+pub fn alloc() -> Option<u64> {
     let mut page_info = PAGE_INFO.lock();
     for (i, page) in page_info.iter_mut().enumerate() {
         if let PageInfo::Free = page {
             *page = PageInfo::InUse { refcount: 1 };
-            return Some(i * 4096);
+            return Some((i * 4096) as u64);
         }
     }
     None
 }
 
-pub fn alloc_zeroed() -> Option<usize> {
+pub fn alloc_zeroed() -> Option<u64> {
     let mut page_info = PAGE_INFO.lock();
     for (i, page) in page_info.iter_mut().enumerate() {
         if let PageInfo::Free = page {
@@ -88,13 +88,13 @@ pub fn alloc_zeroed() -> Option<usize> {
             unsafe {
                 core::ptr::write_bytes(mapped_ptr, 0, 4096);
             }
-            return Some(ptr);
+            return Some(ptr as u64);
         }
     }
     None
 }
 
-pub fn alloc_contiguous(pages: usize) -> Option<usize> {
+pub fn alloc_contiguous(pages: usize) -> Option<u64> {
     let mut page_info = PAGE_INFO.lock();
     let mut start = 0;
     let mut count = 0;
@@ -109,7 +109,7 @@ pub fn alloc_contiguous(pages: usize) -> Option<usize> {
                     for page in &mut page_info[start..start + pages] {
                         *page = PageInfo::InUse { refcount: 1 };
                     }
-                    return Some(start * 4096);
+                    return Some((start * 4096) as u64);
                 }
             }
             _ => {

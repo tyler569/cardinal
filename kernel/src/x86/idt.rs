@@ -141,7 +141,7 @@ pub(super) unsafe fn system_init() {
     IDT[45] = IdtEntry::new(irq13, 0, 0, GateType::InterruptGate);
     IDT[46] = IdtEntry::new(irq14, 0, 0, GateType::InterruptGate);
     IDT[47] = IdtEntry::new(irq15, 0, 0, GateType::InterruptGate);
-    IDT[128] = IdtEntry::new(isr_syscall, 0, 0, GateType::InterruptGate);
+    IDT[128] = IdtEntry::new(isr_syscall, 0, 3, GateType::InterruptGate);
     IDT[129] = IdtEntry::new(isr_ipi, 0, 0, GateType::InterruptGate);
     IDT[130] = IdtEntry::new(isr_ipi_panic, 0, 0, GateType::InterruptGate);
 }

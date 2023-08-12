@@ -1,4 +1,6 @@
 use crate::limine;
+use crate::pci::PciAddress;
+use crate::per_cpu::PerCpu;
 use crate::print::println;
 use core::arch::asm;
 use core::marker::Sync;
@@ -21,11 +23,10 @@ mod pic;
 mod pio;
 mod serial;
 
-use crate::per_cpu::PerCpu;
-use crate::pci::PciAddress;
 pub use context::Context;
-pub use cpu::{cpu_num, Cpu};
-pub use page::physical_address;
+pub use cpu::{cpu_num, Cpu, kernel_stack};
+pub use long_jump::{long_jump, long_jump_usermode};
+pub use page::{Pte, map, physical_address};
 pub use serial::SERIAL;
 
 static DIRECT_MAP_OFFSET: Lazy<usize> =
@@ -62,6 +63,7 @@ pub fn early_system_init() {
 
         let root = page::get_vm_root();
         println!("VM root: {:#x}", root as usize);
+        page::init();
         // page::print_page_table(root);
     }
 }
@@ -73,16 +75,12 @@ pub unsafe fn early_cpu_init() {
     lapic::start_timer();
 }
 
-pub unsafe fn long_jump(jump_to: usize) -> ! {
-    long_jump::long_jump(jump_to)
-}
-
-pub fn direct_map_offset() -> usize {
-    *DIRECT_MAP_OFFSET
+pub fn direct_map_offset(phy: u64) -> usize {
+    (phy as usize + *DIRECT_MAP_OFFSET)
 }
 
 pub fn direct_map<T>(ptr: *const T) -> *const T {
-    (ptr as usize + direct_map_offset()) as *const T
+    (ptr as usize + *DIRECT_MAP_OFFSET) as *const T
 }
 
 pub fn direct_map_mut<T>(ptr: *mut T) -> *mut T {

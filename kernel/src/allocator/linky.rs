@@ -209,7 +209,7 @@ unsafe impl core::alloc::Allocator for LockedAllocator {
 
 unsafe impl GlobalAlloc for LockedAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.lock().allocate(layout).unwrap().as_ptr().as_mut_ptr()
+        self.lock().allocate(layout).unwrap().as_mut_ptr()
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {

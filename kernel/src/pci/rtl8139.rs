@@ -39,45 +39,51 @@ impl Rtl8139 {
         arch::pci_write(address, bar_offset, io_base);
 
         let irq = arch::pci_read(address, 0x3c) as u8 & 0xf;
-        let mut mac = [0; 6];
-        for i in 0..6 {
-            mac[i] = unsafe { (io_base as *const u8).add(i).read_volatile() }
-        }
 
-        Self {
+        let mut res = Self {
             address,
             io_base: io_base as usize,
             io_size: io_size as usize,
             irq,
-            mac: MacAddress::new(mac),
+            mac: MacAddress::new( [0; 6]),
             tx_slot: 0,
+        };
+        let mut mac = [0; 6];
+        for i in 0..6 {
+            mac[i] = unsafe { res.io_read_u8(i) };
         }
+        res.mac = MacAddress::new(mac);
+        res
     }
 
-
-    pub unsafe fn io_read_u8(&self, offset: usize) -> u8 {
-        ((self.io_base + offset) as *const u8).read_volatile()
+    fn io_ptr(&self, offset: usize) -> *mut u8 {
+        arch::direct_map_mut((self.io_base + offset) as *mut u8)
     }
 
-    pub unsafe fn io_write_u8(&self, offset: usize, value: u8) {
-        ((self.io_base + offset) as *mut u8).write_volatile(value)
+    unsafe fn io_read_u8(&self, offset: usize) -> u8 {
+        (self.io_ptr(offset) as *const u8).read_volatile()
     }
 
-    pub unsafe fn io_read_u16(&self, offset: usize) -> u16 {
-        ((self.io_base + offset) as *const u16).read_volatile()
+    unsafe fn io_read_u16(&self, offset: usize) -> u16 {
+        (self.io_ptr(offset) as *const u16).read_volatile()
     }
 
-    pub unsafe fn io_write_u16(&self, offset: usize, value: u16) {
-        ((self.io_base + offset) as *mut u16).write_volatile(value)
+    unsafe fn io_read_u32(&self, offset: usize) -> u32 {
+        (self.io_ptr(offset) as *const u32).read_volatile()
     }
 
-    pub unsafe fn io_read_u32(&self, offset: usize) -> u32 {
-        ((self.io_base + offset) as *const u32).read_volatile()
+    unsafe fn io_write_u8(&self, offset: usize, value: u8) {
+        (self.io_ptr(offset)).write_volatile(value)
     }
 
-    pub unsafe fn io_write_u32(&self, offset: usize, value: u32) {
-        ((self.io_base + offset) as *mut u32).write_volatile(value)
+    unsafe fn io_write_u16(&self, offset: usize, value: u16) {
+        (self.io_ptr(offset) as *mut u16).write_volatile(value)
     }
+
+    unsafe fn io_write_u32(&self, offset: usize, value: u32) {
+        (self.io_ptr(offset) as *mut u32).write_volatile(value)
+    }
+
 
     pub fn init(&mut self) {
         self.reset();
@@ -96,7 +102,7 @@ impl Rtl8139 {
             println!("RTL8139 reset");
 
             let ring_phy = crate::pmm::alloc_contiguous(16).unwrap();
-            let ring_mapped = ring_phy + arch::direct_map_offset();
+            let ring_mapped = arch::direct_map_offset(ring_phy);
 
             self.io_write_u32(0x30, ring_phy as u32); // ring buffer
             self.io_write_u16(0x3c, 0x0005); // configure interrupts and txok, rxok

@@ -2,4 +2,4 @@
 
 set -euo pipefail
 
-llvm-objdump -d kernel/build/cardinal3 | rustfilt | less
+llvm-objdump -d build/cardinal3 | rustfilt | less

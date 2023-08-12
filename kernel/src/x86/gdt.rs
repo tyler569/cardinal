@@ -159,17 +159,11 @@ pub fn init_in_place(gdt: &mut [u64; 7], tss: &mut Tss) {
 pub unsafe fn load(gdt: &[u64; 7]) {
     let ptr = GdtPtr::new(gdt);
     asm!("lgdt [{0}]", in(reg) &ptr);
+    asm!("ltr ax", in("ax") 0x28);
 }
 
 pub fn debug_print(gdt: &[u64]) {
     for (i, entry) in gdt.iter().enumerate() {
         println!("gdt[{}]: {:#018x?}", i, entry);
     }
-}
-
-static mut INITIAL_STACK: [u8; 4096] = [0; 4096];
-static mut DF_STACK: [u8; 4096] = [0; 4096];
-
-pub(super) fn initial_stack_pointer() -> *mut u8 {
-    unsafe { INITIAL_STACK.as_mut_ptr().add(INITIAL_STACK.len()) }
 }

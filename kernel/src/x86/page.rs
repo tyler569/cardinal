@@ -1,6 +1,6 @@
 use core::arch::asm;
 use crate::print::println;
-use crate::x86;
+use crate::{pmm, x86};
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
@@ -17,6 +17,16 @@ impl Pte {
     pub const COPY_ON_WRITE: u64 = 0x200;
     pub const OS_RESERVED2: u64 = 0x400;
     pub const OS_RESERVED3: u64 = 0x800;
+
+    pub const P4_MASK: u64 = 0xffff_ff80_0000_0000;
+    pub const P3_MASK: u64 = 0xffff_ffff_c000_0000;
+    pub const P2_MASK: u64 = 0xffff_ffff_ffe0_0000;
+    pub const P1_MASK: u64 = 0xffff_ffff_ffff_f000;
+
+    pub const P1_OFFSET: u64 = !Self::P1_MASK;
+    pub const P2_OFFSET: u64 = !Self::P2_MASK;
+    pub const P3_OFFSET: u64 = !Self::P3_MASK;
+    pub const P4_OFFSET: u64 = !Self::P4_MASK;
 
     pub fn is_present(self) -> bool {
         self.0 & Self::PRESENT != 0
@@ -120,76 +130,103 @@ fn print_page_table_level(root: *const PageTable, level: i32, addr: u64) {
     }
 }
 
-pub unsafe fn pte_ptr(root: *const PageTable, virt: usize) -> Option<*const Pte> {
-    let root = unsafe { &*root };
-    let p4_index = (virt >> 39) & 0x1ff;
-    let p3_index = (virt >> 30) & 0x1ff;
-    let p2_index = (virt >> 21) & 0x1ff;
-    let p1_index = (virt >> 12) & 0x1ff;
+pub unsafe fn map_in_table(root: *mut PageTable, virt: usize, phys: u64, flags: u64) {
+    let p4_offset = (virt >> 39) & 0x1ff;
+    let p3_offset = (virt >> 30) & 0x1ff;
+    let p2_offset = (virt >> 21) & 0x1ff;
+    let p1_offset = (virt >> 12) & 0x1ff;
 
-    if !root.entries[p4_index].is_present() {
-        return None;
-    }
-
-    let p3_table = root.entries[p4_index].next_table();
-    if !(*p3_table).entries[p3_index].is_present() {
-        return None;
-    }
-
-    let p2_table = (*p3_table).entries[p3_index].next_table();
-    if !(*p2_table).entries[p2_index].is_present() {
-        return None;
-    }
-
-    let p1_table = (*p2_table).entries[p2_index].next_table();
-    Some(&(*p1_table).entries[p1_index])
-}
-
-pub unsafe fn pte_mut(root: *mut PageTable, virt: usize, create_flags: Option<u64>) -> Option<*mut Pte> {
-    let mut root = unsafe { &mut *root };
-    let p4_index = (virt >> 39) & 0x1ff;
-    let p3_index = (virt >> 30) & 0x1ff;
-    let p2_index = (virt >> 21) & 0x1ff;
-    let p1_index = (virt >> 12) & 0x1ff;
-
-    let Some(mut table_flags) = create_flags else {
-        return pte_ptr(root, virt).map(|ptr| ptr as *mut Pte);
+    let table_flags = if virt < 0xffff_8000_0000_0000 {
+        Pte::PRESENT | Pte::WRITEABLE | Pte::USERMODE
+    } else {
+        Pte::PRESENT | Pte::WRITEABLE
     };
-    table_flags |= Pte::PRESENT;
 
-    if !root.entries[p4_index].is_present() {
-        let table = crate::pmm::alloc_zeroed().unwrap();
-        root.entries[p4_index].set(table as u64, table_flags);
+    let p4 = &mut (*root).entries[p4_offset];
+    if !p4.is_present() {
+        let p3_page = pmm::alloc().unwrap();
+        let p3_ptr = x86::direct_map_offset(p3_page) as *mut PageTable;
+        p4.set(p3_page, Pte::PRESENT | Pte::WRITEABLE);
+        for entry in (*p3_ptr).entries.iter_mut() {
+            entry.set(0, 0);
+        }
     }
 
-    let p3_table = root.entries[p4_index].next_table_mut();
-    if !(*p3_table).entries[p3_index].is_present() {
-        let table = crate::pmm::alloc_zeroed().unwrap();
-        (*p3_table).entries[p3_index].set(table as u64, table_flags);
+    let p3 = &mut (*p4.next_table_mut()).entries[p3_offset];
+    if !p3.is_present() {
+        let p2_page = pmm::alloc().unwrap();
+        let p2_ptr = x86::direct_map_offset(p2_page) as *mut PageTable;
+        p3.set(p2_page, table_flags);
+        for entry in (*p2_ptr).entries.iter_mut() {
+            entry.set(0, 0);
+        }
+    }
+    if p3.is_huge() {
+        panic!("tried to map inside a huge page")
     }
 
-    let p2_table = (*p3_table).entries[p3_index].next_table_mut();
-    if !(*p2_table).entries[p2_index].is_present() {
-        let table = crate::pmm::alloc_zeroed().unwrap();
-        (*p2_table).entries[p2_index].set(table as u64, table_flags);
+    let p2 = &mut (*p3.next_table_mut()).entries[p2_offset];
+    if !p2.is_present() {
+        let p1_page = pmm::alloc().unwrap();
+        let p1_ptr = x86::direct_map_offset(p1_page) as *mut PageTable;
+        p2.set(p1_page, table_flags);
+        for entry in (*p1_ptr).entries.iter_mut() {
+            entry.set(0, 0);
+        }
+    }
+    if p2.is_huge() {
+        panic!("tried to map inside a huge page")
     }
 
-    let p1_table = (*p2_table).entries[p2_index].next_table_mut();
-    if !(*p1_table).entries[p1_index].is_present() {
-        let table = crate::pmm::alloc_zeroed().unwrap();
-        (*p1_table).entries[p1_index].set(table as u64, table_flags);
-    }
-
-    Some(&mut (*p1_table).entries[p1_index])
+    let p1 = &mut (*p2.next_table_mut()).entries[p1_offset];
+    p1.set(phys, flags);
 }
 
-pub unsafe fn map(root: *mut PageTable, virt: usize, phys: u64, flags: u64) {
-    (*pte_mut(root, virt, Some(flags)).unwrap()).set(phys, flags);
+pub fn map(virt: usize, phys: u64, flags: u64) {
+    unsafe {
+        map_in_table(get_vm_root(), virt, phys, flags | Pte::PRESENT);
+        asm!("invlpg [{}]", in(reg) virt);
+    }
 }
 
 pub fn physical_address(virtual_address: usize) -> Option<u64> {
-    unsafe {
-        let pte = pte_ptr(get_vm_root(), virtual_address)?;
-        Some((*pte).address() + (virtual_address as u64 & 0xfff))
+    let p4_offset = (virtual_address >> 39) & 0x1ff;
+    let p3_offset = (virtual_address >> 30) & 0x1ff;
+    let p2_offset = (virtual_address >> 21) & 0x1ff;
+    let p1_offset = (virtual_address >> 12) & 0x1ff;
+
+    let p4 = unsafe { &(*get_vm_root()).entries[p4_offset] };
+    if !p4.is_present() {
+        return None;
     }
+
+    let p3 = unsafe { &(*p4.next_table()).entries[p3_offset] };
+    if !p3.is_present() {
+        return None;
+    }
+    if p3.is_huge() {
+        return Some(p3.address() + (virtual_address as u64 & Pte::P3_OFFSET));
+    }
+
+    let p2 = unsafe { &(*p3.next_table()).entries[p2_offset] };
+    if !p2.is_present() {
+        return None;
+    }
+    if p2.is_huge() {
+        return Some(p2.address() + (virtual_address as u64 & Pte::P2_OFFSET));
+    }
+
+    let p1 = unsafe { &(*p2.next_table()).entries[p1_offset] };
+    if !p1.is_present() {
+        return None;
+    }
+
+    Some(p1.address() + (virtual_address as u64 & Pte::P1_OFFSET))
+}
+
+pub unsafe fn init() {
+    let mut root = get_vm_root();
+    (*root).entries[0].set(0, 0);
+    (*root).entries[1].set(0, 0);
+    (*root).entries[257].set(0, 0);
 }
