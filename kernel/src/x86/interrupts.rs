@@ -1,9 +1,9 @@
 use crate::per_cpu::PerCpu;
-use crate::print::println;
+use crate::print::{print, println};
 use crate::x86;
 use crate::x86::cpu::cpu_num;
 use crate::x86::frame::InterruptFrame;
-use crate::x86::{lapic, SERIAL};
+use crate::x86::{cpu, lapic, SERIAL};
 use core::arch::asm;
 use core::cell::UnsafeCell;
 use core::ops::Deref;
@@ -22,6 +22,7 @@ pub unsafe fn disable_interrupts() {
 unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     match (*frame).interrupt_number {
         3 => handle_breakpoint(&mut *frame),
+        14 => handle_page_fault(&mut *frame),
         32..=47 => handle_irq(&mut *frame),
         128 => handle_syscall(&mut *frame),
         129 => handle_ipi(&mut *frame),
@@ -33,6 +34,36 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
 fn handle_breakpoint(frame: &mut InterruptFrame) {
     println!("break point");
     println!("{}", frame);
+}
+
+fn handle_page_fault(frame: &mut InterruptFrame) {
+    report_page_fault(frame.error_code, cpu::cr2());
+    println!("{}", frame);
+    panic!();
+}
+
+fn report_page_fault(error_code: u64, fault_addr: u64) {
+    if error_code & !0x1F != 0 {
+        println!("page fault caused by unknown condition (code: {:#x})", error_code);
+        return;
+    }
+    if error_code & 0x8 != 0 {
+        println!("page fault caused by writing to a reserved field");
+        return;
+    }
+    let reason = if error_code & 0x1 != 0 {
+        "protection violation"
+    } else {
+        "non-present page"
+    };
+    let rw = if error_code & 0x2 != 0 { "writing" } else { "reading" };
+    let mode = if error_code & 0x4 != 0 { "user" } else { "kernel" };
+    let typ = if error_code & 0x10 != 0 { "instruction" } else { "data" };
+
+    println!(
+        "page fault {} {}:{:#x} because {} from {} mode.",
+        rw, typ, cpu::cr2(), reason, mode
+    )
 }
 
 fn handle_irq(frame: &mut InterruptFrame) {
@@ -58,6 +89,17 @@ fn handle_serial(frame: &mut InterruptFrame) {
 
 fn handle_syscall(frame: &mut InterruptFrame) {
     println!("syscall: {}", frame.rax);
+    println!("{}", frame);
+
+    match frame.rax {
+        0 => unsafe {
+            let args = frame.r9 as *const cardinal3_interface::PrintArgs;
+            let data = (*args).data;
+            let str = core::str::from_utf8_unchecked(&*data);
+            print!("usermode message: {}", str);
+        }
+        _ => println!("CPU {} Unhandled syscall {}", cpu_num(), frame.rax),
+    }
 }
 
 fn handle_ipi(frame: &mut InterruptFrame) {

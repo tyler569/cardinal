@@ -46,6 +46,17 @@ pub unsafe fn rdmsr(msr: u32) -> u64 {
     (value_high << 32) + value_low
 }
 
+pub fn cr2() -> u64 {
+    let value: u64;
+    unsafe {
+        asm!(
+            "mov {0:r}, cr2",
+            out(reg) value,
+        );
+    }
+    value
+}
+
 pub fn cpu_num() -> u32 {
     cpuid(1, 0)[1] >> 24
 }

@@ -32,11 +32,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc827186963e592360843fb5ba4b973e145841266c1357f7180c43526f2e5b61"
 
 [[package]]
+name = "cardinal3-interface"
+version = "0.1.0"
+
+[[package]]
 name = "cardinal3-kernel"
 version = "0.1.0"
 dependencies = [
  "acpi",
  "array-init",
+ "cardinal3-interface",
  "elf",
  "spin",
 ]

@@ -146,7 +146,7 @@ pub unsafe fn map_in_table(root: *mut PageTable, virt: usize, phys: u64, flags: 
     if !p4.is_present() {
         let p3_page = pmm::alloc().unwrap();
         let p3_ptr = x86::direct_map_offset(p3_page) as *mut PageTable;
-        p4.set(p3_page, Pte::PRESENT | Pte::WRITEABLE);
+        p4.set(p3_page, table_flags);
         for entry in (*p3_ptr).entries.iter_mut() {
             entry.set(0, 0);
         }

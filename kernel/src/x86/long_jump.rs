@@ -43,6 +43,8 @@ pub unsafe fn long_jump_usermode(jump_to: usize, stack: usize) -> ! {
         "push rdi", // ip
 
         "mov rbp, rsi", // set rbp to rsp
+        "mov rdi, 0",
+        "mov rsi, 0",
 
         "iretq",
         in("rdi") jump_to,
