@@ -1,3 +1,4 @@
+use crate::arch;
 use crate::per_cpu::PerCpu;
 use crate::print::println;
 use alloc::boxed::Box;
@@ -8,7 +9,6 @@ use core::pin::Pin;
 use core::sync::atomic::AtomicBool;
 use core::task::{Context, Poll, RawWaker, RawWakerVTable};
 use spin::Mutex;
-use crate::arch;
 
 pub mod sleep;
 

@@ -45,7 +45,7 @@ impl Rtl8139 {
             io_base: io_base as usize,
             io_size: io_size as usize,
             irq,
-            mac: MacAddress::new( [0; 6]),
+            mac: MacAddress::new([0; 6]),
             tx_slot: 0,
         };
         let mut mac = [0; 6];
@@ -83,7 +83,6 @@ impl Rtl8139 {
     unsafe fn io_write_u32(&self, offset: usize, value: u32) {
         (self.io_ptr(offset) as *mut u32).write_volatile(value)
     }
-
 
     pub fn init(&mut self) {
         self.reset();
@@ -145,6 +144,5 @@ impl Rtl8139 {
             self.tx_slot += 1;
             self.tx_slot %= 4;
         }
-
     }
 }

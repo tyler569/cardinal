@@ -1,8 +1,8 @@
-use alloc::vec::Vec;
-use spin::{Lazy, Mutex};
-use crate::{arch, limine};
 use crate::limine::mmap::{LimineMmapEntry, LimineMmapEntryType};
 use crate::print::println;
+use crate::{arch, limine};
+use alloc::vec::Vec;
+use spin::{Lazy, Mutex};
 
 #[derive(Debug, Copy, Clone)]
 enum PageInfo {
@@ -25,8 +25,9 @@ pub fn init() {
         let entry = unsafe { &**entry };
         // println!("{:x?}", entry);
         match entry.typ {
-            LimineMmapEntryType::BootloaderReclaimable |
-                LimineMmapEntryType::Usable | LimineMmapEntryType::KernelAndModules => {
+            LimineMmapEntryType::BootloaderReclaimable
+            | LimineMmapEntryType::Usable
+            | LimineMmapEntryType::KernelAndModules => {
                 page_count = core::cmp::max(page_count, (entry.base + entry.len) / 4096);
             }
             _ => {}
@@ -34,7 +35,12 @@ pub fn init() {
     }
 
     println!("PageInfo size: {}", core::mem::size_of::<PageInfo>());
-    println!("reserving space for {} pages ({} KiB) (top {:x})", page_count, page_count * 4, page_count * 4096);
+    println!(
+        "reserving space for {} pages ({} KiB) (top {:x})",
+        page_count,
+        page_count * 4,
+        page_count * 4096
+    );
 
     page_info.resize(page_count as usize, PageInfo::NoMemory);
 
@@ -128,7 +134,9 @@ pub fn free(page: usize) {
             if refcount == 1 {
                 page_info[page] = PageInfo::Free;
             } else {
-                page_info[page] = PageInfo::InUse { refcount: refcount - 1 };
+                page_info[page] = PageInfo::InUse {
+                    refcount: refcount - 1,
+                };
             }
         }
         _ => {}
@@ -150,5 +158,8 @@ pub fn summary() {
             _ => {}
         }
     }
-    println!("free: {}, reserved: {}, kernel: {}, leaked: {}", free, reserved, kernel, leaked);
+    println!(
+        "free: {}, reserved: {}, kernel: {}, leaked: {}",
+        free, reserved, kernel, leaked
+    );
 }

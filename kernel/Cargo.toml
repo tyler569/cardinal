@@ -12,6 +12,7 @@ array-init = "2.1.0"
 elf = { version = "0.7.2", default-features = false }
 
 cardinal3-interface = { path = "../interface" }
+bitflags = "2.4.0"
 
 [profile.dev]
 opt-level = 1

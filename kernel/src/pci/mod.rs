@@ -1,7 +1,7 @@
-use core::fmt::{Debug, Display};
 use crate::arch;
 use crate::pci::rtl8139::Rtl8139;
 use crate::print::println;
+use core::fmt::{Debug, Display};
 
 pub mod rtl8139;
 
@@ -86,8 +86,8 @@ fn print_device_info(address: PciAddress) {
     let revision = (class_code >> 0) & 0xff;
     let header_type = (arch::pci_read(address, 12) >> 16) & 0xff;
 
-    println!("PCI device {}: {:04x}:{:04x} (class {:02x}:{:02x}:{:02x} rev {:02x})",
-        address, vendor_id, device_id,
-        class, subclass, prog_if, revision,
+    println!(
+        "PCI device {}: {:04x}:{:04x} (class {:02x}:{:02x}:{:02x} rev {:02x})",
+        address, vendor_id, device_id, class, subclass, prog_if, revision,
     );
 }

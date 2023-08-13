@@ -23,9 +23,11 @@ mod pci;
 mod per_cpu;
 mod pmm;
 mod print;
-mod timer;
-mod x86;
+mod process;
 mod syscalls;
+mod timer;
+mod vmm;
+mod x86;
 
 use crate::arch::SERIAL;
 use crate::per_cpu::PerCpu;
@@ -157,24 +159,8 @@ unsafe fn start_aps() {
 unsafe fn load_and_start_usermode_program() {
     let mods_info = &**limine::MODULE.response.get();
     let mod_info = &*mods_info.modules_slice()[0];
-    let mod_data = mod_info.data();
-    println!("mod data at {:?}", mod_data);
+    let mod_data = &*mod_info.data();
 
-    let efile = elf::ElfBytes::<LittleEndian>::minimal_parse(&*mod_data).unwrap();
-    let segments = efile.segments().unwrap();
-    for header in segments {
-        if header.p_type == elf::abi::PT_LOAD {
-            println!("load offset {:#x} size {:#x} to {:#x}", header.p_offset, header.p_filesz, header.p_vaddr);
-            let page_vma = (header.p_vaddr & !0xfff) as usize;
-            let page_phy = arch::physical_address((mod_data as *const u8 as usize + header.p_offset as usize) & !0xfff).unwrap();
-            arch::map(page_vma, page_phy, arch::Pte::WRITEABLE | arch::Pte::USERMODE);
-        }
-    }
-
-    const STACK: usize = 0x7FFF_FF00_0000;
-    arch::map(STACK, pmm::alloc().unwrap(), arch::Pte::WRITEABLE | arch::Pte::USERMODE);
-    println!("jump to entrypoint {:#x}", efile.ehdr.e_entry);
-    // arch::sleep_forever_no_irq();
-
-    arch::long_jump_usermode(efile.ehdr.e_entry as usize, STACK + 0xFF0);
+    let mut process = process::Process::new(mod_data);
+    process.start();
 }

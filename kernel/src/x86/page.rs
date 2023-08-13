@@ -1,6 +1,9 @@
-use core::arch::asm;
-use crate::print::println;
+use crate::print::{print, println};
+use crate::vmm::PageFlags;
 use crate::{pmm, x86};
+use bitflags::Flags;
+use core::arch::asm;
+use core::fmt::{Display, Formatter};
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
@@ -17,6 +20,7 @@ impl Pte {
     pub const COPY_ON_WRITE: u64 = 0x200;
     pub const OS_RESERVED2: u64 = 0x400;
     pub const OS_RESERVED3: u64 = 0x800;
+    pub const NX: u64 = 0x8000_0000_0000_0000;
 
     pub const P4_MASK: u64 = 0xffff_ff80_0000_0000;
     pub const P3_MASK: u64 = 0xffff_ffff_c000_0000;
@@ -60,6 +64,10 @@ impl Pte {
         self.is_present() && self.0 & Self::COPY_ON_WRITE != 0
     }
 
+    pub fn is_nx(self) -> bool {
+        self.is_present() && self.0 & Self::NX != 0
+    }
+
     pub fn new(address: u64, flags: u64) -> Self {
         Self(address | flags)
     }
@@ -93,20 +101,55 @@ impl Pte {
     }
 }
 
+impl Display for Pte {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "Pte({:#018x}, {}{}{}{}{}{}{}{})",
+            self.address(),
+            if self.is_writeable() { "W" } else { "-" },
+            if self.is_usermode() { "U" } else { "-" },
+            if self.is_accessed() { "A" } else { "-" },
+            if self.is_dirty() { "D" } else { "-" },
+            if self.is_huge() { "H" } else { "-" },
+            if self.is_global() { "G" } else { "-" },
+            if self.is_copy_on_write() { "C" } else { "-" },
+            if self.is_nx() { "X" } else { "-" },
+        )
+    }
+}
+
+fn generic_flags(flags: PageFlags) -> u64 {
+    let mut x86_flags = Pte::NX | Pte::PRESENT;
+    if !flags.contains(PageFlags::READ) {
+        print!("warning: x86_64 cannot create non-readable pages\n")
+    }
+    if flags.contains(PageFlags::WRITE) {
+        x86_flags |= Pte::WRITEABLE;
+    }
+    if flags.contains(PageFlags::EXECUTE) {
+        x86_flags &= !Pte::NX;
+    }
+    if flags.contains(PageFlags::USER) {
+        x86_flags |= Pte::USERMODE;
+    }
+    x86_flags
+}
+
 #[repr(align(4096))]
 pub struct PageTable {
     entries: [Pte; 512],
 }
 
 pub fn get_vm_root() -> *mut PageTable {
-    let vm_root;
+    let vm_root: u64;
     unsafe {
         asm!(
             "mov {}, cr3",
             out(reg) vm_root,
         );
     }
-    x86::direct_map_mut(vm_root)
+    x86::direct_map_mut((vm_root & 0xffff_ffff_ffff_f000) as *mut PageTable)
 }
 
 pub fn print_page_table(root: *const PageTable) {
@@ -121,16 +164,19 @@ fn print_page_table_level(root: *const PageTable, level: i32, addr: u64) {
             addr |= 0xFFFF_0000_0000_0000;
         }
         if entry.is_present() {
-            println!("Entry {:#018x}: {:#012x}", addr, entry.address());
             if level > 1 && !entry.is_huge() {
-                println!("Entry {:#018x}: {:#012x}", addr, entry.address());
+                println!("Table {}: {}", level - 1, entry);
                 print_page_table_level(entry.next_table(), level - 1, addr);
+            } else {
+                println!("Entry {:#018x}: {} ({:#018x})", addr, entry, entry.0);
             }
         }
     }
 }
 
-pub unsafe fn map_in_table(root: *mut PageTable, virt: usize, phys: u64, flags: u64) {
+pub unsafe fn map_in_table(root: *mut PageTable, virt: usize, phys: u64, flags: PageFlags) {
+    let flags = generic_flags(flags) | Pte::PRESENT;
+
     let p4_offset = (virt >> 39) & 0x1ff;
     let p3_offset = (virt >> 30) & 0x1ff;
     let p2_offset = (virt >> 21) & 0x1ff;
@@ -182,9 +228,9 @@ pub unsafe fn map_in_table(root: *mut PageTable, virt: usize, phys: u64, flags: 
     p1.set(phys, flags);
 }
 
-pub fn map(virt: usize, phys: u64, flags: u64) {
+pub fn map(virt: usize, phys: u64, flags: PageFlags) {
     unsafe {
-        map_in_table(get_vm_root(), virt, phys, flags | Pte::PRESENT);
+        map_in_table(get_vm_root(), virt, phys, flags);
         asm!("invlpg [{}]", in(reg) virt);
     }
 }
@@ -222,6 +268,30 @@ pub fn physical_address(virtual_address: usize) -> Option<u64> {
     }
 
     Some(p1.address() + (virtual_address as u64 & Pte::P1_OFFSET))
+}
+
+pub fn new_tree() -> *mut PageTable {
+    let root = get_vm_root();
+
+    let page = pmm::alloc().unwrap();
+    let page = x86::direct_map_offset(page) as *mut PageTable;
+    unsafe {
+        for (i, entry) in (*page).entries.iter_mut().enumerate() {
+            if i < 256 {
+                entry.set(0, 0);
+            } else {
+                *entry = (*root).entries[i];
+            }
+        }
+    }
+    page
+}
+
+pub fn load_tree(root: *mut PageTable) {
+    unsafe {
+        let root = x86::physical_address(root as usize).unwrap();
+        asm!("mov cr3, {}", in(reg) root);
+    }
 }
 
 pub unsafe fn init() {

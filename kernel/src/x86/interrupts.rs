@@ -44,7 +44,10 @@ fn handle_page_fault(frame: &mut InterruptFrame) {
 
 fn report_page_fault(error_code: u64, fault_addr: u64) {
     if error_code & !0x1F != 0 {
-        println!("page fault caused by unknown condition (code: {:#x})", error_code);
+        println!(
+            "page fault caused by unknown condition (code: {:#x})",
+            error_code
+        );
         return;
     }
     if error_code & 0x8 != 0 {
@@ -56,13 +59,29 @@ fn report_page_fault(error_code: u64, fault_addr: u64) {
     } else {
         "non-present page"
     };
-    let rw = if error_code & 0x2 != 0 { "writing" } else { "reading" };
-    let mode = if error_code & 0x4 != 0 { "user" } else { "kernel" };
-    let typ = if error_code & 0x10 != 0 { "instruction" } else { "data" };
+    let rw = if error_code & 0x2 != 0 {
+        "writing"
+    } else {
+        "reading"
+    };
+    let mode = if error_code & 0x4 != 0 {
+        "user"
+    } else {
+        "kernel"
+    };
+    let typ = if error_code & 0x10 != 0 {
+        "instruction"
+    } else {
+        "data"
+    };
 
     println!(
         "page fault {} {}:{:#x} because {} from {} mode.",
-        rw, typ, cpu::cr2(), reason, mode
+        rw,
+        typ,
+        cpu::cr2(),
+        reason,
+        mode
     )
 }
 
@@ -88,7 +107,6 @@ fn handle_serial(frame: &mut InterruptFrame) {
 }
 
 fn handle_syscall(frame: &mut InterruptFrame) {
-    println!("syscall: {:x}", frame.rax);
     crate::syscalls::handle_syscall(frame);
 }
 

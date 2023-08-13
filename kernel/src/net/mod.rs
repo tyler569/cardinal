@@ -1,14 +1,14 @@
 mod ethernet;
-mod ipv4;
 mod icmp;
+mod ipv4;
 mod packet;
 
-pub use ethernet::MacAddress;
 pub use ethernet::EthernetHeader;
+pub use ethernet::MacAddress;
+pub use icmp::IcmpHeader;
 pub use ipv4::Ipv4Address;
 pub use ipv4::Ipv4Header;
 pub use ipv4::Ipv4Protocol;
-pub use icmp::IcmpHeader;
 pub use packet::Packet;
 
 pub trait Header: Sized {

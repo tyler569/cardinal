@@ -36,7 +36,12 @@ pub struct Ipv4Header {
 }
 
 impl Ipv4Header {
-    pub fn new(source: Ipv4Address, destination: Ipv4Address, protocol: Ipv4Protocol, data: &[u8]) -> Self {
+    pub fn new(
+        source: Ipv4Address,
+        destination: Ipv4Address,
+        protocol: Ipv4Protocol,
+        data: &[u8],
+    ) -> Self {
         let total_length = (data.len() + 20) as u16;
         let identification = 0;
         let flags = 0;

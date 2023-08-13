@@ -32,6 +32,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc827186963e592360843fb5ba4b973e145841266c1357f7180c43526f2e5b61"
 
 [[package]]
+name = "bitflags"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
+
+[[package]]
 name = "cardinal3-interface"
 version = "0.1.0"
 
@@ -41,6 +47,7 @@ version = "0.1.0"
 dependencies = [
  "acpi",
  "array-init",
+ "bitflags",
  "cardinal3-interface",
  "elf",
  "spin",

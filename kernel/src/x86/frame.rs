@@ -1,7 +1,8 @@
+use crate::x86;
 use core::fmt::Formatter;
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct InterruptFrame {
     pub(super) ds: u64,
     pub(super) r15: u64,
@@ -29,6 +30,23 @@ pub struct InterruptFrame {
 }
 
 impl InterruptFrame {
+    pub fn new() -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
+
+    pub fn new_user(ip: usize) -> Self {
+        Self {
+            ip: ip as u64,
+            cs: 0x1b,
+            flags: 0x200,
+            ss: 0x23,
+            user_sp: x86::USER_STACK_TOP as u64,
+            ..Default::default()
+        }
+    }
+
     pub fn interrupt_number(&self) -> u64 {
         self.interrupt_number
     }
@@ -39,6 +57,10 @@ impl InterruptFrame {
 
     pub fn set_syscall_return(&mut self, value: usize) {
         self.rax = value as u64;
+    }
+
+    pub fn ip(&self) -> usize {
+        self.ip as usize
     }
 }
 

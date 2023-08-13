@@ -37,12 +37,7 @@ pub struct LimineModuleResponse {
 
 impl LimineModuleResponse {
     pub fn modules_slice(&self) -> &[*const LimineFile] {
-        unsafe {
-            core::slice::from_raw_parts(
-                self.modules,
-                self.module_count as usize,
-            )
-        }
+        unsafe { core::slice::from_raw_parts(self.modules, self.module_count as usize) }
     }
 }
 
