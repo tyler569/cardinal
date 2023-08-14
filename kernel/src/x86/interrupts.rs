@@ -39,11 +39,9 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
                 process::schedule(proc);
             }
         }
-        x86::long_jump(
-            crate::run_executor,
-            crate::RUN_STACK.as_ptr() as usize + 4096
-        );
     }
+
+    process::run_usermode_program();
 }
 
 fn handle_breakpoint(frame: &mut InterruptFrame) {
@@ -115,6 +113,7 @@ fn handle_irq(frame: &mut InterruptFrame) {
 fn handle_timer(frame: &mut InterruptFrame) {
     let cpu = cpu_num() as usize;
     PerCpu::get_mut().timer.tick();
+    PerCpu::get_mut().executor.do_work();
 }
 
 fn handle_serial(frame: &mut InterruptFrame) {

@@ -96,7 +96,7 @@ pub(super) unsafe fn system_init() {
     IDT[0] = IdtEntry::new(isr0, 0, 0, GateType::InterruptGate);
     IDT[1] = IdtEntry::new(isr1, 0, 0, GateType::InterruptGate);
     IDT[2] = IdtEntry::new(isr2, 0, 0, GateType::InterruptGate);
-    IDT[3] = IdtEntry::new(isr3, 0, 0, GateType::InterruptGate);
+    IDT[3] = IdtEntry::new(isr3, 0, 3, GateType::InterruptGate);
     IDT[4] = IdtEntry::new(isr4, 0, 0, GateType::InterruptGate);
     IDT[5] = IdtEntry::new(isr5, 0, 0, GateType::InterruptGate);
     IDT[6] = IdtEntry::new(isr6, 0, 0, GateType::InterruptGate);

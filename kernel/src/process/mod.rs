@@ -113,3 +113,11 @@ pub fn schedule(proc: &Process) {
 pub fn schedule_pid(pid: usize) {
     RUNNABLE.lock().push_back(pid);
 }
+
+pub fn run_usermode_program() {
+    let Some(pid) = RUNNABLE.lock().pop_front() else {
+        return;
+    };
+    Process::run(pid)
+}
+

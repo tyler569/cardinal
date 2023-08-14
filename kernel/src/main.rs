@@ -55,12 +55,6 @@ unsafe extern "C" fn kernel_main() -> ! {
 
     arch::enable_interrupts();
 
-    // timer::insert(Duration::from_secs(1), || println!("timer 1"));
-    // timer::insert(Duration::from_secs(1), || arch::send_ipi(1, 129));
-
-    // let res = async_test::run_async(async_test::foobar(10, 11));
-    // println!("async result: {}", res);
-
     println!("spawning sleep task");
     executor::spawn(async {
         loop {
@@ -105,7 +99,7 @@ unsafe extern "C" fn kernel_main() -> ! {
     // load_and_start_usermode_program();
 
     // executor::work_forever()
-    run_executor()
+    arch::sleep_forever()
 }
 
 unsafe extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
@@ -122,7 +116,7 @@ unsafe extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
 
 unsafe fn ap_main() -> ! {
     arch::enable_interrupts();
-    executor::work_forever()
+    arch::sleep_forever();
 }
 
 #[panic_handler]
@@ -170,21 +164,3 @@ unsafe fn load_and_start_usermode_program() {
     let pid = Process::new(mod_data);
     process::schedule_pid(pid);
 }
-
-static mut RUN_STACK: [u8; 4096] = [0; 4096];
-
-unsafe fn run_executor() -> ! {
-    loop {
-        PerCpu::get_mut().executor.do_work();
-        asm!("sti", "hlt");
-        run_usermode_program()
-    }
-}
-
-unsafe fn run_usermode_program() {
-    let Some(pid) = process::RUNNABLE.lock().pop_front() else {
-        return;
-    };
-    Process::run(pid)
-}
-
