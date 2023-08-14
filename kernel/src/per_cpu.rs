@@ -3,14 +3,17 @@ use crate::timer::Timer;
 use crate::{arch, NUM_CPUS};
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut, Index, IndexMut};
+use core::ptr::NonNull;
 use core::sync::atomic::AtomicU64;
 use spin::Lazy;
+use crate::process::Process;
 
 pub struct PerCpu {
     this: *const UnsafeCell<Self>,
     pub arch: arch::Cpu,
     pub timer: Timer,
     pub executor: Executor,
+    pub running: Option<NonNull<Process>>,
 }
 
 impl PerCpu {
@@ -20,6 +23,7 @@ impl PerCpu {
             arch: arch::Cpu::new(),
             timer: Timer::new(),
             executor: Executor::new(),
+            running: None,
         }
     }
 

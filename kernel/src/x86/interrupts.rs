@@ -1,6 +1,6 @@
 use crate::per_cpu::PerCpu;
 use crate::print::{print, println};
-use crate::x86;
+use crate::{arch, process, x86};
 use crate::x86::cpu::cpu_num;
 use crate::x86::frame::InterruptFrame;
 use crate::x86::{cpu, lapic, SERIAL};
@@ -9,6 +9,7 @@ use core::cell::UnsafeCell;
 use core::ops::Deref;
 use core::sync::atomic::{AtomicU64, Ordering};
 use spin::Lazy;
+use crate::arch::Context;
 
 pub unsafe fn enable_interrupts() {
     asm!("cli");
@@ -28,6 +29,20 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
         129 => handle_ipi(&mut *frame),
         130 => handle_ipi_panic(&mut *frame),
         _ => unexpected_interrupt(&*frame),
+    }
+
+    if (*frame).cs & 0x03 == 0x03 {
+        if let Some(proc) = PerCpu::get_mut().running.as_mut() {
+            let proc = proc.as_mut();
+            proc.context = Context::new(&*frame);
+            if proc.exit_code.is_none() {
+                process::schedule(proc);
+            }
+        }
+        x86::long_jump(
+            crate::run_executor,
+            crate::RUN_STACK.as_ptr() as usize + 4096
+        );
     }
 }
 

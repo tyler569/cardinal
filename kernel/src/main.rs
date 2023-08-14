@@ -33,6 +33,7 @@ use crate::arch::SERIAL;
 use crate::per_cpu::PerCpu;
 pub(crate) use print::{print, println};
 pub(crate) use x86 as arch;
+use crate::process::Process;
 
 pub const NUM_CPUS: usize = 16;
 
@@ -42,7 +43,7 @@ pub unsafe extern "C" fn kernel_init() -> ! {
     PerCpu::init();
     arch::early_system_init();
     pmm::init();
-    arch::long_jump(kernel_main as usize)
+    arch::long_jump_cs(kernel_main as usize)
 }
 
 unsafe extern "C" fn kernel_main() -> ! {
@@ -71,7 +72,11 @@ unsafe extern "C" fn kernel_main() -> ! {
     println!("spawning serial task");
     executor::spawn(async {
         loop {
-            print!("{}", SERIAL.read().await as char);
+            let c = SERIAL.read().await;
+            if c == b's' {
+                load_and_start_usermode_program();
+            }
+            print!("{}", c as char);
         }
     });
 
@@ -97,9 +102,10 @@ unsafe extern "C" fn kernel_main() -> ! {
     //     ]);
     // }
 
-    load_and_start_usermode_program();
+    // load_and_start_usermode_program();
 
-    executor::work_forever()
+    // executor::work_forever()
+    run_executor()
 }
 
 unsafe extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
@@ -111,7 +117,7 @@ unsafe extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
         arch::cpu_num()
     );
 
-    arch::long_jump(ap_main as usize)
+    arch::long_jump_cs(ap_main as usize)
 }
 
 unsafe fn ap_main() -> ! {
@@ -161,6 +167,24 @@ unsafe fn load_and_start_usermode_program() {
     let mod_info = &*mods_info.modules_slice()[0];
     let mod_data = &*mod_info.data();
 
-    let mut process = process::Process::new(mod_data);
-    process.start();
+    let pid = Process::new(mod_data);
+    process::schedule_pid(pid);
 }
+
+static mut RUN_STACK: [u8; 4096] = [0; 4096];
+
+unsafe fn run_executor() -> ! {
+    loop {
+        PerCpu::get_mut().executor.do_work();
+        asm!("sti", "hlt");
+        run_usermode_program()
+    }
+}
+
+unsafe fn run_usermode_program() {
+    let Some(pid) = process::RUNNABLE.lock().pop_front() else {
+        return;
+    };
+    Process::run(pid)
+}
+

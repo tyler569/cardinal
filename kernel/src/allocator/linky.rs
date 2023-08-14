@@ -5,6 +5,7 @@ use core::mem::{size_of, transmute};
 use core::ops::Deref;
 use core::ptr::NonNull;
 use spin::{Mutex, MutexGuard};
+use crate::print::print;
 
 const PRINT: bool = false;
 
@@ -116,7 +117,7 @@ impl Allocator {
 
     fn allocate(&mut self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
         if PRINT {
-            println!("allocating {:?}", layout);
+            print!("allocating {:?}", layout);
         }
 
         let mut current = self.head;
@@ -127,6 +128,10 @@ impl Allocator {
                 self.split_region(region, layout);
 
                 region.state = State::Allocated;
+
+                if PRINT {
+                    println!(" -> {:?}", region.memory());
+                }
 
                 // return the memory
                 return Ok(unsafe {

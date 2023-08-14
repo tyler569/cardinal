@@ -2,7 +2,7 @@ use crate::x86;
 use core::fmt::Formatter;
 
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct InterruptFrame {
     pub(super) ds: u64,
     pub(super) r15: u64,
@@ -38,6 +38,7 @@ impl InterruptFrame {
 
     pub fn new_user(ip: usize) -> Self {
         Self {
+            r12: 0x1234,
             ip: ip as u64,
             cs: 0x1b,
             flags: 0x200,

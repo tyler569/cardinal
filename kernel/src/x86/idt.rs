@@ -179,7 +179,9 @@ unsafe extern "C" fn interrupt_shim() {
         "xor rbp, rbp",
         "mov ds, ebp",
         "mov rdi, rsp",
+        "sub rsp, 8", // alignment
         "call rs_interrupt_shim",
+        "add rsp, 8", // alignment
         "pop rbp",
         "mov ds, ebp",
         "pop r15",
