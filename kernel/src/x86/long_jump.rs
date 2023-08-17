@@ -65,6 +65,7 @@ pub unsafe fn long_jump(jump_to: unsafe fn() -> !, stack: usize) -> ! {
 }
 
 pub unsafe fn long_jump_context(context: *const Context) -> ! {
+    assert_eq!(context as usize & 0xf, 0, "context must be 16-byte aligned");
     if (*context).has_fpu_context {
         asm!("fxrstor [{}]", in(reg) &(*context).fpu_context);
     }

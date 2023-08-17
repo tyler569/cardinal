@@ -45,6 +45,10 @@ impl Context {
     pub fn ip(&self) -> usize {
         self.frame.ip()
     }
+
+    pub fn set_arg1(&mut self, arg1: u64) {
+        self.frame.rdi = arg1;
+    }
 }
 
 impl Debug for Context {

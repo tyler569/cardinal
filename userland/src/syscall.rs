@@ -17,7 +17,11 @@ pub fn print(string: &str) -> usize {
     syscall(&Syscall::Print(string))
 }
 
-pub fn exit() -> ! {
-    syscall(&Syscall::Exit(0));
+pub fn exit(code: u32) -> ! {
+    syscall(&Syscall::Exit(code));
     unreachable!();
+}
+
+pub fn spawn(name: &str, arg: usize) -> usize {
+    syscall(&Syscall::Spawn(name, arg))
 }

@@ -68,9 +68,17 @@ impl Allocator {
         assert!(region.size >= layout.size());
         assert_eq!(region.state, State::Free);
 
-        // round up the desired size to the nearest multiple of 16
+        // round up the size so the next allocation is always on a 16 byte boundary
         let size = layout.size();
-        let size = (size + 15) & !15;
+        let size = {
+            let here = region.memory() as usize;
+            let next = here + size + size_of::<Link>();
+            if next % 16 == 0 {
+                size
+            } else {
+                size + 16 - (next % 16)
+            }
+        };
 
         // check if we have enough size to split
         if region.size < size + size_of::<Link>() + 16 {
@@ -80,6 +88,7 @@ impl Allocator {
         // create a new region
         let new_region = unsafe {
             let new_region_ptr = region.memory().add(size) as *mut Link;
+
             *new_region_ptr = Link {
                 next: region.next,
                 size: region.size - size - size_of::<Link>(),

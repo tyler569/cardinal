@@ -42,6 +42,14 @@ impl PerCpu {
     pub fn get_mut() -> &'static mut Self {
         unsafe { &mut *PER_CPU[arch::cpu_num() as usize].get() }
     }
+
+    pub fn running() -> Option<&'static mut Process> {
+        Self::get_mut().running.as_mut().map(|p| unsafe { p.as_mut() })
+    }
+
+    pub fn set_running(proc: Option<NonNull<Process>>) {
+        Self::get_mut().running = proc;
+    }
 }
 
 // This is all hidden and only exists to impl `Sync` on the UnsafeCell in PerCpu

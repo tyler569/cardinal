@@ -37,4 +37,4 @@ qemu-system-x86_64 \
   -object filter-dump,id=f1,netdev=nic,file=nic.pcap \
   $stdio_usage \
   $debug \
-  -no-reboot
+  -no-reboot | tee last_output

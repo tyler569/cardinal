@@ -1,4 +1,5 @@
 use alloc::collections::{BTreeMap, VecDeque};
+use alloc::vec::Vec;
 use core::arch::asm;
 use core::ptr::NonNull;
 use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -38,10 +39,10 @@ pub enum ProcessState {
 static DO_IT_ONCE: AtomicBool = AtomicBool::new(true);
 
 impl Process {
-    pub unsafe fn new(elf_data: &[u8]) -> usize {
+    pub unsafe fn new(elf_data: &[u8], arg: usize) -> usize {
         let efile = elf::ElfBytes::<LittleEndian>::minimal_parse(elf_data).unwrap();
         let vm_root = arch::new_tree();
-        let context = Context::new_user(efile.ehdr.e_entry as usize);
+        let mut context = Context::new_user(efile.ehdr.e_entry as usize);
         let base = elf_data.as_ptr() as usize;
 
         for ph in efile.segments().unwrap() {
@@ -71,6 +72,17 @@ impl Process {
             PageFlags::READ | PageFlags::WRITE | PageFlags::USER,
         );
 
+        for i in 0..16 {
+            arch::map_in_table(
+                vm_root,
+                0x7FFF_FFF0_0000 + 0x1000 * i,
+                pmm::alloc().unwrap(),
+                PageFlags::READ | PageFlags::WRITE | PageFlags::USER,
+            )
+        }
+
+        context.set_arg1(arg as u64);
+
         let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
 
         let process = Self {
@@ -83,7 +95,7 @@ impl Process {
         };
 
         ALL.lock().insert(id, process);
-        println!("Created process {}", id);
+        // println!("Created process {}", id);
         id
     }
 
@@ -96,11 +108,18 @@ impl Process {
             arch::load_tree(process.vm_root);
             &process.context as *const _
         };
+        assert_eq!(context as usize & 0xf, 0, "context is not 16-byte aligned");
         unsafe {
             arch::long_jump_context(context)
         }
     }
 }
+
+// impl Drop for Process {
+//     fn drop(&mut self) {
+//         println!("Dropping process {}", self.id);
+//     }
+// }
 
 static NEXT_ID: AtomicUsize = AtomicUsize::new(1);
 pub static ALL: Mutex<BTreeMap<usize, Process>> = Mutex::new(BTreeMap::new());

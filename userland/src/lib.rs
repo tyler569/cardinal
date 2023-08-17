@@ -6,18 +6,18 @@ pub mod syscall;
 
 #[panic_handler]
 fn panic(_panic_info: &core::panic::PanicInfo) -> ! {
+    syscall::print("[user] panic!\n");
+    syscall::exit(1);
     loop {}
 }
 
-extern "C" {
-    #[linkage = "weak"]
-    fn _main();
-}
+extern "Rust" { fn _main(arg: usize); }
 
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn _start(arg: usize) {
     unsafe {
-        _main();
+        _main(arg);
     }
+    syscall::print("[user] main returned!\n");
     loop {}
 }

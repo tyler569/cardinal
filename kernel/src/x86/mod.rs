@@ -113,7 +113,7 @@ pub fn broadcast_ipi(vector: u8) {
 
 pub fn sleep_forever() -> ! {
     loop {
-        unsafe { asm!("hlt") };
+        unsafe { asm!("sti", "hlt") };
     }
 }
 
@@ -124,7 +124,7 @@ pub fn sleep_forever_no_irq() -> ! {
 }
 
 pub fn sleep_until_interrupt() {
-    unsafe { asm!("hlt") };
+    unsafe { asm!("sti", "hlt") };
 }
 
 pub fn pci_read(addr: PciAddress, offset: u8) -> u32 {
@@ -152,5 +152,21 @@ unsafe fn acpi_debug() {
     );
     if let ::acpi::platform::interrupt::InterruptModel::Apic(apic) = platform_info.interrupt_model {
         println!("apic: {:#x?}", apic);
+    }
+}
+
+pub fn print_backtrace() {
+    let bp: usize;
+    unsafe {
+        asm!("mov {}, rbp", out(reg) bp);
+    }
+    print_backtrace_from(bp);
+}
+
+pub fn print_backtrace_from(mut bp: usize) {
+    while bp != 0 {
+        let ip = unsafe { *(bp as *const usize).offset(1) };
+        println!("({:#x}) <>", ip);
+        bp = unsafe { *(bp as *const usize) };
     }
 }

@@ -2,11 +2,11 @@ pub fn _print(args: core::fmt::Arguments) {
     use crate::arch::SERIAL;
     use core::fmt::Write;
 
-    SERIAL.write().write_fmt(args).unwrap();
+    // SERIAL.write().write_fmt(args).unwrap();
 
-    // if let Some(mut serial) = SERIAL.try_write() {
-    //     serial.write_fmt(args).unwrap();
-    // }
+    if let Some(mut serial) = SERIAL.try_write() {
+        serial.write_fmt(args).unwrap();
+    }
 }
 
 macro_rules! print {

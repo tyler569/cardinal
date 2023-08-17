@@ -3,13 +3,14 @@ use crate::print::{print, println};
 use crate::{arch, process, x86};
 use crate::x86::cpu::cpu_num;
 use crate::x86::frame::InterruptFrame;
-use crate::x86::{cpu, lapic, SERIAL};
+use crate::x86::{cpu, lapic, print_backtrace_from, SERIAL};
 use core::arch::asm;
 use core::cell::UnsafeCell;
 use core::ops::Deref;
 use core::sync::atomic::{AtomicU64, Ordering};
 use spin::Lazy;
 use crate::arch::Context;
+use crate::process::Process;
 
 pub unsafe fn enable_interrupts() {
     asm!("cli");
@@ -19,8 +20,16 @@ pub unsafe fn disable_interrupts() {
     asm!("sti");
 }
 
+static INTERRUPT_COUNT: AtomicU64 = AtomicU64::new(0);
+
 #[no_mangle]
 unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
+    let bp: usize;
+    asm!("mov {}, rbp", out(reg) bp, options(nostack));
+    assert_eq!(bp & 0xf, 0, "stack not aligned to 16 bytes");
+
+    let count = INTERRUPT_COUNT.fetch_add(1, Ordering::Relaxed);
+
     match (*frame).interrupt_number {
         3 => handle_breakpoint(&mut *frame),
         14 => handle_page_fault(&mut *frame),
@@ -31,17 +40,32 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
         _ => unexpected_interrupt(&*frame),
     }
 
+    let mut wants_continue = true;
+
     if (*frame).cs & 0x03 == 0x03 {
-        if let Some(proc) = PerCpu::get_mut().running.as_mut() {
-            let proc = proc.as_mut();
+        if let Some(proc) = PerCpu::running() {
             proc.context = Context::new(&*frame);
             if proc.exit_code.is_none() {
                 process::schedule(proc);
+            } else {
+                wants_continue = false;
+                let pid = proc.id;
+                crate::executor::spawn(async move {
+                    crate::process::ALL.lock().remove(&pid);
+                    // println!("reaped process {}", pid);
+                })
             }
         }
+        PerCpu::set_running(None);
     }
 
     process::run_usermode_program();
+
+    if wants_continue {
+        return
+    } else {
+        arch::sleep_forever()
+    }
 }
 
 fn handle_breakpoint(frame: &mut InterruptFrame) {

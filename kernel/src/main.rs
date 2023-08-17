@@ -5,6 +5,7 @@
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
 #![feature(pointer_byte_offsets)]
+#![feature(int_roundings)]
 
 extern crate alloc;
 
@@ -51,7 +52,7 @@ unsafe extern "C" fn kernel_main() -> ! {
 
     // limine_info();
 
-    start_aps();
+    // start_aps();
 
     arch::enable_interrupts();
 
@@ -68,7 +69,7 @@ unsafe extern "C" fn kernel_main() -> ! {
         loop {
             let c = SERIAL.read().await;
             if c == b's' {
-                load_and_start_usermode_program();
+                load_and_start_usermode_program(0);
             }
             print!("{}", c as char);
         }
@@ -124,6 +125,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     arch::broadcast_ipi(130);
 
     println!("PANIC: {}", info);
+    arch::print_backtrace();
 
     arch::sleep_forever_no_irq()
 }
@@ -156,11 +158,15 @@ unsafe fn start_aps() {
     }
 }
 
-unsafe fn load_and_start_usermode_program() {
-    let mods_info = &**limine::MODULE.response.get();
-    let mod_info = &*mods_info.modules_slice()[0];
-    let mod_data = &*mod_info.data();
+fn elf_data() -> *const [u8] {
+    unsafe {
+        let mods_info = &**limine::MODULE.response.get();
+        let mod_info = &*mods_info.modules_slice()[0];
+        mod_info.data()
+    }
+}
 
-    let pid = Process::new(mod_data);
+unsafe fn load_and_start_usermode_program(arg: usize) {
+    let pid = Process::new(&*elf_data(), arg);
     process::schedule_pid(pid);
 }
