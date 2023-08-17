@@ -1,16 +1,16 @@
+use crate::arch::Context;
 use crate::per_cpu::PerCpu;
 use crate::print::{print, println};
-use crate::{arch, process, x86};
+use crate::process::Process;
 use crate::x86::cpu::cpu_num;
 use crate::x86::frame::InterruptFrame;
 use crate::x86::{cpu, lapic, print_backtrace_from, SERIAL};
+use crate::{arch, process, x86};
 use core::arch::asm;
 use core::cell::UnsafeCell;
 use core::ops::Deref;
 use core::sync::atomic::{AtomicU64, Ordering};
 use spin::Lazy;
-use crate::arch::Context;
-use crate::process::Process;
 
 pub unsafe fn enable_interrupts() {
     asm!("cli");
@@ -62,7 +62,7 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     process::run_usermode_program();
 
     if wants_continue {
-        return
+        return;
     } else {
         arch::sleep_forever()
     }

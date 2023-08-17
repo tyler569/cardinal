@@ -2,5 +2,7 @@
 
 set -euo pipefail
 
-cd kernel
-cargo fmt
+cargo -Zunstable-options -C kernel fmt
+cargo -Zunstable-options -C userland fmt
+cargo -Zunstable-options -C interface fmt
+cargo -Zunstable-options -C allocator fmt

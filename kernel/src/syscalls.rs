@@ -1,9 +1,9 @@
-use crate::{arch, elf_data, process};
 use crate::arch::InterruptFrame;
-use crate::print::{print, println};
-use cardinal3_interface::Syscall;
 use crate::per_cpu::PerCpu;
+use crate::print::{print, println};
 use crate::process::Process;
+use crate::{arch, elf_data, process};
+use cardinal3_interface::Syscall;
 
 pub fn handle_syscall(frame: &mut InterruptFrame) {
     let syscall = frame.syscall_info();
@@ -22,10 +22,10 @@ pub fn handle_syscall(frame: &mut InterruptFrame) {
                 panic!("No running process");
             };
             proc.exit_code = Some(code);
-        }
+        },
         &Syscall::Spawn(_name, arg) => unsafe {
             let pid = Process::new(&*elf_data(), arg);
             process::schedule_pid(pid);
-        }
+        },
     }
 }

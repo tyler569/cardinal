@@ -1,6 +1,6 @@
-use crate::x86::{Context, cpu};
-use core::arch::asm;
 use crate::print::println;
+use crate::x86::{cpu, Context};
+use core::arch::asm;
 
 pub unsafe fn long_jump_cs(jump_to: usize) -> ! {
     let new_stack = cpu::kernel_stack();

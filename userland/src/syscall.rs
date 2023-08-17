@@ -1,5 +1,5 @@
-use core::arch::asm;
 use cardinal3_interface::Syscall;
+use core::arch::asm;
 
 fn syscall(args: &Syscall) -> usize {
     let result: usize;

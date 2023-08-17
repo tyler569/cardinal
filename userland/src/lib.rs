@@ -8,10 +8,13 @@ pub mod syscall;
 fn panic(_panic_info: &core::panic::PanicInfo) -> ! {
     syscall::print("[user] panic!\n");
     syscall::exit(1);
+    #[allow(unreachable_code)]
     loop {}
 }
 
-extern "Rust" { fn _main(arg: usize); }
+extern "Rust" {
+    fn _main(arg: usize);
+}
 
 #[no_mangle]
 pub extern "C" fn _start(arg: usize) {

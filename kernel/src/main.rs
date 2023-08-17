@@ -9,11 +9,11 @@
 
 extern crate alloc;
 
+use cardinal3_allocator as allocator;
 use core::arch::asm;
 use core::pin::pin;
 use core::sync::atomic::AtomicBool;
 use core::time::Duration;
-use cardinal3_allocator as allocator;
 use elf::endian::LittleEndian;
 
 mod executor;
@@ -32,9 +32,9 @@ mod x86;
 
 use crate::arch::SERIAL;
 pub(crate) use crate::per_cpu::PerCpu;
+pub(crate) use crate::process::Process;
 pub(crate) use print::{print, println};
 pub(crate) use x86 as arch;
-pub(crate) use crate::process::Process;
 
 pub const NUM_CPUS: usize = 16;
 

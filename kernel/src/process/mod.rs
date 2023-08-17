@@ -1,16 +1,16 @@
-use alloc::collections::{BTreeMap, VecDeque};
-use alloc::vec::Vec;
-use core::arch::asm;
-use core::ptr::NonNull;
-use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use crate::arch::{Context, PageTable};
+use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::vmm::PageFlags;
 use crate::{arch, pmm, vmm};
+use alloc::collections::{BTreeMap, VecDeque};
+use alloc::vec::Vec;
 use bitflags::Flags;
+use core::arch::asm;
+use core::ptr::NonNull;
+use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use elf::endian::LittleEndian;
 use spin::Mutex;
-use crate::per_cpu::PerCpu;
 
 mod spawn;
 
@@ -100,7 +100,7 @@ impl Process {
     }
 
     pub fn run(id: usize) -> ! {
-        let context = unsafe  {
+        let context = unsafe {
             let mut binding = ALL.lock();
             let process = binding.get_mut(&id).unwrap();
             // arch::print_page_table(self.vm_root);
@@ -109,9 +109,7 @@ impl Process {
             &process.context as *const _
         };
         assert_eq!(context as usize & 0xf, 0, "context is not 16-byte aligned");
-        unsafe {
-            arch::long_jump_context(context)
-        }
+        unsafe { arch::long_jump_context(context) }
     }
 }
 
@@ -139,4 +137,3 @@ pub fn run_usermode_program() {
     };
     Process::run(pid)
 }
-

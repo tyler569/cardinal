@@ -1,7 +1,7 @@
-use core::arch::asm;
-use crate::x86::frame::InterruptFrame;
-use core::fmt::Debug;
 use crate::print::println;
+use crate::x86::frame::InterruptFrame;
+use core::arch::asm;
+use core::fmt::Debug;
 
 #[derive(Clone)]
 #[repr(align(16))]
