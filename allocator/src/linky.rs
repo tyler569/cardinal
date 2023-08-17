@@ -1,13 +1,9 @@
-use crate::println;
 use core::alloc::{AllocError, GlobalAlloc, Layout};
 use core::fmt::{self, Debug, Formatter};
 use core::mem::{size_of, transmute};
 use core::ops::Deref;
 use core::ptr::NonNull;
 use spin::{Mutex, MutexGuard};
-use crate::print::print;
-
-const PRINT: bool = false;
 
 struct Allocator {
     head: Option<NonNull<Link>>,
@@ -125,10 +121,6 @@ impl Allocator {
     }
 
     fn allocate(&mut self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        if PRINT {
-            print!("allocating {:?}", layout);
-        }
-
         let mut current = self.head;
         while let Some(mut region) = current {
             let region = unsafe { region.as_mut() };
@@ -137,10 +129,6 @@ impl Allocator {
                 self.split_region(region, layout);
 
                 region.state = State::Allocated;
-
-                if PRINT {
-                    println!(" -> {:?}", region.memory());
-                }
 
                 // return the memory
                 return Ok(unsafe {
@@ -152,17 +140,10 @@ impl Allocator {
             }
             current = region.next;
         }
-        if PRINT {
-            println!("failed to allocate {:?}, {:?}", layout, self.head);
-        }
         Err(AllocError)
     }
 
     fn deallocate(&mut self, ptr: NonNull<u8>, layout: Layout) {
-        if PRINT {
-            println!("deallocating {:?} {:?}", ptr, layout);
-        }
-
         let region = unsafe { transmute::<_, *mut Link>(ptr.as_ptr()).offset(-1) };
         let region = unsafe { &mut *region };
         assert_eq!(region.state, State::Allocated);

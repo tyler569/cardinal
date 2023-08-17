@@ -38,6 +38,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
 
 [[package]]
+name = "cardinal3-allocator"
+version = "0.1.0"
+dependencies = [
+ "spin",
+]
+
+[[package]]
 name = "cardinal3-interface"
 version = "0.1.0"
 
@@ -48,6 +55,7 @@ dependencies = [
  "acpi",
  "array-init",
  "bitflags",
+ "cardinal3-allocator",
  "cardinal3-interface",
  "elf",
  "spin",

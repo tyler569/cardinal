@@ -13,9 +13,9 @@ use core::arch::asm;
 use core::pin::pin;
 use core::sync::atomic::AtomicBool;
 use core::time::Duration;
+use cardinal3_allocator as allocator;
 use elf::endian::LittleEndian;
 
-mod allocator;
 mod executor;
 mod limine;
 mod mem;
@@ -31,10 +31,10 @@ mod vmm;
 mod x86;
 
 use crate::arch::SERIAL;
-use crate::per_cpu::PerCpu;
+pub(crate) use crate::per_cpu::PerCpu;
 pub(crate) use print::{print, println};
 pub(crate) use x86 as arch;
-use crate::process::Process;
+pub(crate) use crate::process::Process;
 
 pub const NUM_CPUS: usize = 16;
 
@@ -49,6 +49,8 @@ pub unsafe extern "C" fn kernel_init() -> ! {
 
 unsafe extern "C" fn kernel_main() -> ! {
     asm!("int3");
+
+    println!("process is {}", core::mem::size_of::<Process>());
 
     // limine_info();
 
