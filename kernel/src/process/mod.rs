@@ -22,6 +22,7 @@ pub struct Process {
     pub pending_signals: u64,
     pub exit_code: Option<u32>,
     pub id: usize,
+    pub sched_in: u64,
 }
 
 // Rust is mad because of the PageTable, but we'll never modify that through this object
@@ -92,10 +93,11 @@ impl Process {
             pending_signals: 0,
             exit_code: None,
             id,
+            sched_in: 0,
         };
 
         ALL.lock().insert(id, process);
-        // println!("Created process {}", id);
+        println!("[cpu:{} created pid:{}]", arch::cpu_num(), id);
         id
     }
 
@@ -103,8 +105,9 @@ impl Process {
         let context = unsafe {
             let mut binding = ALL.lock();
             let process = binding.get_mut(&id).unwrap();
+            process.sched_in = PerCpu::ticks();
             // arch::print_page_table(self.vm_root);
-            PerCpu::get_mut().running = Some(NonNull::new_unchecked(process as *mut _));
+            PerCpu::set_running(Some(NonNull::new_unchecked(process as *mut _)));
             arch::load_tree(process.vm_root);
             &process.context as *const _
         };
@@ -113,27 +116,34 @@ impl Process {
     }
 }
 
-// impl Drop for Process {
-//     fn drop(&mut self) {
-//         println!("Dropping process {}", self.id);
-//     }
-// }
+impl Drop for Process {
+    fn drop(&mut self) {
+        arch::free_tree(self.vm_root);
+    }
+}
 
 static NEXT_ID: AtomicUsize = AtomicUsize::new(1);
 pub static ALL: Mutex<BTreeMap<usize, Process>> = Mutex::new(BTreeMap::new());
 pub static RUNNABLE: Mutex<VecDeque<usize>> = Mutex::new(VecDeque::new());
 
 pub fn schedule(proc: &Process) {
-    RUNNABLE.lock().push_back(proc.id);
+    schedule_pid(proc.id);
 }
 
 pub fn schedule_pid(pid: usize) {
-    RUNNABLE.lock().push_back(pid);
+    let mut handle = RUNNABLE.lock();
+    // assert!(handle.iter().all(|&p| p != pid), "double scheduling {}!", pid);
+    if handle.iter().any(|&p| p == pid) {
+        return;
+    }
+    handle.push_back(pid);
 }
 
 pub fn run_usermode_program() {
     let Some(pid) = RUNNABLE.lock().pop_front() else {
         return;
     };
+    println!("[cpu:{} running pid:{}]", arch::cpu_num(), pid);
+    // println!("[runnable: {:?}]", RUNNABLE.lock());
     Process::run(pid)
 }

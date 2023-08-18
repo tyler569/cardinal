@@ -53,6 +53,10 @@ impl PerCpu {
     pub fn set_running(proc: Option<NonNull<Process>>) {
         Self::get_mut().running = proc;
     }
+
+    pub fn ticks() -> u64 {
+        Self::get().timer.ticks()
+    }
 }
 
 // This is all hidden and only exists to impl `Sync` on the UnsafeCell in PerCpu

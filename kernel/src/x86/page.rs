@@ -294,6 +294,8 @@ pub fn load_tree(root: *mut PageTable) {
     }
 }
 
+pub fn free_tree(root: *mut PageTable) {}
+
 pub unsafe fn init() {
     let mut root = get_vm_root();
     (*root).entries[0].set(0, 0);

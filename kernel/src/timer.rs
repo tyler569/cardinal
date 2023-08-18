@@ -64,8 +64,13 @@ impl Timer {
             }
         }
     }
+
+    pub fn ticks(&self) -> u64 {
+        self.ticks.load(Ordering::Relaxed)
+    }
 }
 
+#[deprecated = "use PerCpu::ticks() instead"]
 pub fn timestamp() -> u64 {
     PerCpu::get().timer.ticks.load(Ordering::Relaxed)
 }

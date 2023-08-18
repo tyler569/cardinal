@@ -1,3 +1,4 @@
+use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::timer;
 use core::future::Future;
@@ -14,7 +15,7 @@ impl Sleep {
     fn new(duration: core::time::Duration) -> Self {
         // println!("[async] new sleep");
         Self {
-            until: timer::timestamp() + timer::ticks_for(duration),
+            until: PerCpu::ticks() + timer::ticks_for(duration),
         }
     }
 }
@@ -23,7 +24,7 @@ impl Future for Sleep {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        if timer::timestamp() > self.until {
+        if PerCpu::ticks() > self.until {
             // println!("[async] sleep done");
             Poll::Ready(())
         } else {

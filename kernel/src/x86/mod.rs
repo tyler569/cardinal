@@ -26,7 +26,9 @@ pub use context::Context;
 pub use cpu::{cpu_num, kernel_stack, Cpu};
 pub use frame::InterruptFrame;
 pub use long_jump::{long_jump, long_jump_context, long_jump_cs, long_jump_usermode};
-pub use page::{load_tree, map, map_in_table, new_tree, physical_address, PageTable, Pte};
+pub use page::{
+    free_tree, load_tree, map, map_in_table, new_tree, physical_address, PageTable, Pte,
+};
 pub use serial::SERIAL;
 
 pub use page::print_page_table;

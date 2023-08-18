@@ -46,6 +46,10 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
         if let Some(proc) = PerCpu::running() {
             proc.context = Context::new(&*frame);
             if proc.exit_code.is_none() {
+                if proc.sched_in + 10 > PerCpu::ticks() {
+                    assert_ne!((*frame).ip, 0, "trying to return to 0!");
+                    return;
+                }
                 process::schedule(proc);
             } else {
                 wants_continue = false;
@@ -60,6 +64,8 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     }
 
     process::run_usermode_program();
+
+    assert_ne!((*frame).ip, 0, "trying to return to 0!");
 
     if wants_continue {
         return;

@@ -9,15 +9,19 @@ pub fn handle_syscall(frame: &mut InterruptFrame) {
     let syscall = frame.syscall_info();
     let pid = PerCpu::running().map(|p| p.id).unwrap_or(0);
 
-    // println!("syscall: {:?} {:?}", syscall as *const _, syscall);
+    println!(
+        "[cpu:{} pid:{} syscall:{:?}]",
+        arch::cpu_num(),
+        pid,
+        syscall
+    );
 
     match syscall {
-        Syscall::Print(string) => {
-            print!("{}: {}", pid, string);
-            frame.set_syscall_return(0);
+        &Syscall::Print(string) => {
+            // print!("{}", pid, string);
+            frame.set_syscall_return(string.len());
         }
         &Syscall::Exit(code) => unsafe {
-            // println!("{}: exit {}", pid, code);
             let Some(proc) = PerCpu::running() else {
                 panic!("No running process");
             };

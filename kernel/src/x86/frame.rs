@@ -37,6 +37,7 @@ impl InterruptFrame {
     }
 
     pub fn new_user(ip: usize) -> Self {
+        assert_ne!(ip, 0, "trying to create context to 0!");
         Self {
             r12: 0x1234,
             ip: ip as u64,

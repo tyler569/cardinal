@@ -50,11 +50,9 @@ pub unsafe extern "C" fn kernel_init() -> ! {
 unsafe extern "C" fn kernel_main() -> ! {
     asm!("int3");
 
-    println!("process is {}", core::mem::size_of::<Process>());
-
     // limine_info();
 
-    // start_aps();
+    start_aps();
 
     arch::enable_interrupts();
 
@@ -126,7 +124,7 @@ unsafe fn ap_main() -> ! {
 fn panic(info: &core::panic::PanicInfo) -> ! {
     arch::broadcast_ipi(130);
 
-    println!("PANIC: {}", info);
+    println!("CPU {} PANIC: {}", arch::cpu_num(), info);
     arch::print_backtrace();
 
     arch::sleep_forever_no_irq()
@@ -169,6 +167,8 @@ fn elf_data() -> *const [u8] {
 }
 
 unsafe fn load_and_start_usermode_program(arg: usize) {
-    let pid = Process::new(&*elf_data(), arg);
-    process::schedule_pid(pid);
+    let pid1 = Process::new(&*elf_data(), arg);
+    let pid2 = Process::new(&*elf_data(), arg);
+    process::schedule_pid(pid1);
+    process::schedule_pid(pid2);
 }
