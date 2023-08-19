@@ -6,7 +6,7 @@ pub mod syscall;
 
 #[panic_handler]
 fn panic(_panic_info: &core::panic::PanicInfo) -> ! {
-    syscall::print("[user] panic!\n");
+    syscall::println("user panic!\n");
     syscall::exit(1);
     #[allow(unreachable_code)]
     loop {}
@@ -21,6 +21,6 @@ pub extern "C" fn _start(arg: usize) {
     unsafe {
         _main(arg);
     }
-    syscall::print("[user] main returned!\n");
+    syscall::println("main returned!\n");
     loop {}
 }

@@ -171,8 +171,5 @@ fn elf_data() -> *const [u8] {
 }
 
 unsafe fn load_and_start_usermode_program(arg: usize) {
-    let pid1 = Process::new(&*elf_data(), arg);
-    let pid2 = Process::new(&*elf_data(), arg);
-    process::schedule_pid(pid1);
-    process::schedule_pid(pid2);
+    process::schedule_pid(Process::new(&*elf_data(), arg));
 }

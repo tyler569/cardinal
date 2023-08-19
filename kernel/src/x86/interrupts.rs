@@ -1,9 +1,8 @@
-use crate::arch::Context;
 use crate::per_cpu::PerCpu;
 use crate::print::{print, println};
 use crate::process::Process;
+use crate::x86::context::{Context, InterruptFrame};
 use crate::x86::cpu::cpu_num;
-use crate::x86::frame::InterruptFrame;
 use crate::x86::{cpu, lapic, print_backtrace_from, SERIAL};
 use crate::{arch, process, x86};
 use core::arch::asm;

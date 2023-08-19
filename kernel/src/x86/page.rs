@@ -312,7 +312,10 @@ unsafe fn free_tree_level(root: *mut PageTable, level: usize) {
             if level == 1 {
                 pmm::free(entry.address());
             } else {
-                free_tree_level(x86::direct_map_offset(entry.address()) as *mut PageTable, level - 1);
+                free_tree_level(
+                    x86::direct_map_offset(entry.address()) as *mut PageTable,
+                    level - 1,
+                );
                 pmm::free(entry.address());
             }
         }

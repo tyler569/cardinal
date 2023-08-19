@@ -13,8 +13,8 @@ fn syscall(args: &Syscall) -> usize {
     result
 }
 
-pub fn print(string: &str) -> usize {
-    syscall(&Syscall::Print(string))
+pub fn println(string: &str) -> usize {
+    syscall(&Syscall::Println(string))
 }
 
 pub fn exit(code: u32) -> ! {

@@ -1,7 +1,7 @@
 use crate::executor::Executor;
 use crate::process::Process;
 use crate::timer::Timer;
-use crate::{arch, NUM_CPUS, process};
+use crate::{arch, process, NUM_CPUS};
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut, Index, IndexMut};
 use core::ptr::NonNull;

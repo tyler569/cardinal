@@ -68,7 +68,7 @@ impl Process {
 
         arch::map_in_table(
             vm_root,
-            0x7FFF_FF00_0000,
+            0x7FFF_FEFF_F000,
             pmm::alloc().unwrap(),
             PageFlags::READ | PageFlags::WRITE | PageFlags::USER,
         );

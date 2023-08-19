@@ -1,5 +1,5 @@
 use crate::print::println;
-use crate::x86::frame::InterruptFrame;
+use crate::x86::context::InterruptFrame;
 use core::arch::asm;
 
 static mut IDT: Idt = Idt::zero();

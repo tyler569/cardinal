@@ -17,8 +17,8 @@ pub fn handle_syscall(frame: &mut InterruptFrame) {
     );
 
     match syscall {
-        &Syscall::Print(string) => {
-            // print!("{}", pid, string);
+        &Syscall::Println(string) => {
+            // println!("{}", string);
             frame.set_syscall_return(string.len());
         }
         &Syscall::Exit(code) => unsafe {
