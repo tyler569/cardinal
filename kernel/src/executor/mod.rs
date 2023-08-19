@@ -34,6 +34,7 @@ impl Executor {
     }
 
     pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
+        assert!(arch::interrupts_are_disabled());
         let id = self.next_id;
         self.next_id += 1;
         let task = Task {
@@ -44,6 +45,7 @@ impl Executor {
     }
 
     pub fn do_work(&mut self) {
+        assert!(arch::interrupts_are_disabled());
         let mut tasks_to_poll = self.tasks_to_poll.lock();
         while let Some(id) = tasks_to_poll.pop_front() {
             let task = self.tasks.get_mut(&id).unwrap();
@@ -60,24 +62,21 @@ const WAKER_VTABLE: RawWakerVTable =
     RawWakerVTable::new(exec_clone, exec_wake, exec_wake_by_ref, exec_drop);
 
 fn exec_clone(data: *const ()) -> RawWaker {
-    // println!("[async] exec_clone");
     RawWaker::new(data, &WAKER_VTABLE)
 }
 
 unsafe fn exec_wake(data: *const ()) {
-    // println!("[async] exec_wake");
+    assert!(arch::interrupts_are_disabled());
     let id = data as usize;
     let executor = &PerCpu::get().executor;
     executor.tasks_to_poll.lock().push_back(id);
 }
 
 unsafe fn exec_wake_by_ref(data: *const ()) {
-    // println!("[async] exec_wake_by_ref");
     exec_wake(data)
 }
 
 unsafe fn exec_drop(data: *const ()) {
-    // println!("[async] exec_drop");
 }
 
 fn new_waker(id: usize) -> core::task::Waker {
@@ -87,14 +86,4 @@ fn new_waker(id: usize) -> core::task::Waker {
 
 pub fn spawn(future: impl Future<Output = ()> + 'static) {
     PerCpu::get_mut().executor.spawn(future);
-}
-
-pub fn work_forever() -> ! {
-    loop {
-        PerCpu::get_mut().executor.do_work();
-
-        // consider scheduling usermode process
-
-        arch::sleep_until_interrupt();
-    }
 }

@@ -54,8 +54,6 @@ unsafe extern "C" fn kernel_main() -> ! {
 
     start_aps();
 
-    arch::enable_interrupts();
-
     println!("spawning sleep task");
     executor::spawn(async {
         loop {
@@ -77,14 +75,6 @@ unsafe extern "C" fn kernel_main() -> ! {
         }
     });
 
-    // println!("spawning panic task");
-    // executor::spawn(async {
-    //     loop {
-    //         executor::sleep::sleep(Duration::from_secs(3)).await;
-    //         panic!();
-    //     }
-    // });
-
     // pci::enumerate_pci_bus();
     // if let Some(rtl_addr) = pci::find_device(0x10ec, 0x8139) {
     //     println!("found rtl8139 at {}", rtl_addr);
@@ -99,9 +89,7 @@ unsafe extern "C" fn kernel_main() -> ! {
     //     ]);
     // }
 
-    // load_and_start_usermode_program();
-
-    // executor::work_forever()
+    arch::enable_interrupts();
     arch::sleep_forever()
 }
 

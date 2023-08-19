@@ -103,6 +103,14 @@ pub fn disable_interrupts() {
     }
 }
 
+pub fn interrupts_are_disabled() -> bool {
+    unsafe {
+        let flags: u64;
+        asm!("pushfq", "pop {}", out(reg) flags);
+        flags & 0x200 == 0
+    }
+}
+
 pub fn send_ipi(cpu_id: u8, vector: u8) {
     lapic::send_ipi(cpu_id, vector);
 }
