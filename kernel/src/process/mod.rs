@@ -102,23 +102,23 @@ impl Process {
     }
 
     pub fn run(id: usize) -> ! {
+        println!("[cpu:{} running pid:{}]", arch::cpu_num(), id);
         let context = unsafe {
             let mut binding = ALL.lock();
             let process = binding.get_mut(&id).unwrap();
             process.sched_in = PerCpu::ticks();
-            // arch::print_page_table(self.vm_root);
-            PerCpu::set_running(Some(NonNull::new_unchecked(process as *mut _)));
+            PerCpu::set_running(Some(id));
             arch::load_tree(process.vm_root);
-            &process.context as *const _
+            process.context.clone()
         };
-        assert_eq!(context as usize & 0xf, 0, "context is not 16-byte aligned");
-        unsafe { arch::long_jump_context(context) }
+        unsafe { arch::long_jump_context(&context) }
     }
 }
 
 impl Drop for Process {
     fn drop(&mut self) {
         arch::free_tree(self.vm_root);
+        println!("[cpu:{} dropped pid:{}]", arch::cpu_num(), self.id);
     }
 }
 
@@ -143,7 +143,5 @@ pub fn run_usermode_program() {
     let Some(pid) = RUNNABLE.lock().pop_front() else {
         return;
     };
-    println!("[cpu:{} running pid:{}]", arch::cpu_num(), pid);
-    // println!("[runnable: {:?}]", RUNNABLE.lock());
     Process::run(pid)
 }

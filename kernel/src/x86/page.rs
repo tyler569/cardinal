@@ -4,6 +4,7 @@ use crate::{pmm, x86};
 use bitflags::Flags;
 use core::arch::asm;
 use core::fmt::{Display, Formatter};
+use spin::Once;
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
@@ -287,18 +288,43 @@ pub fn new_tree() -> *mut PageTable {
     page
 }
 
-pub fn load_tree(root: *mut PageTable) {
+pub fn load_tree(root: *const PageTable) {
     unsafe {
         let root = x86::physical_address(root as usize).unwrap();
         asm!("mov cr3, {}", in(reg) root);
     }
 }
 
-pub fn free_tree(root: *mut PageTable) {}
+pub fn free_tree(root: *mut PageTable) {
+    load_tree(*KERNEL_ROOT.get().unwrap() as *const PageTable);
+    unsafe {
+        free_tree_level(root, 4);
+        pmm::free(x86::physical_address(root as usize).unwrap());
+    }
+}
+
+unsafe fn free_tree_level(root: *mut PageTable, level: usize) {
+    for (i, entry) in (*root).entries.iter().enumerate() {
+        if level == 4 && i > 255 {
+            break;
+        }
+        if entry.is_present() {
+            if level == 1 {
+                pmm::free(entry.address());
+            } else {
+                free_tree_level(x86::direct_map_offset(entry.address()) as *mut PageTable, level - 1);
+                pmm::free(entry.address());
+            }
+        }
+    }
+}
+
+static KERNEL_ROOT: Once<usize> = Once::new();
 
 pub unsafe fn init() {
     let mut root = get_vm_root();
     (*root).entries[0].set(0, 0);
     (*root).entries[1].set(0, 0);
     (*root).entries[257].set(0, 0);
+    KERNEL_ROOT.call_once(|| root as usize);
 }

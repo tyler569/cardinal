@@ -68,8 +68,10 @@ unsafe extern "C" fn kernel_main() -> ! {
     executor::spawn(async {
         loop {
             let c = SERIAL.read().await;
-            if c == b's' {
-                load_and_start_usermode_program(0);
+            match c {
+                b's' => load_and_start_usermode_program(0),
+                b'm' => pmm::summary(),
+                _ => {}
             }
             print!("{}", c as char);
         }
@@ -124,7 +126,9 @@ unsafe fn ap_main() -> ! {
 fn panic(info: &core::panic::PanicInfo) -> ! {
     arch::broadcast_ipi(130);
 
-    println!("CPU {} PANIC: {}", arch::cpu_num(), info);
+    let pid = PerCpu::running();
+
+    println!("CPU {} pid: {:?} PANIC: {}", arch::cpu_num(), pid, info);
     arch::print_backtrace();
 
     arch::sleep_forever_no_irq()

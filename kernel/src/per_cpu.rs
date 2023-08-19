@@ -1,19 +1,19 @@
 use crate::executor::Executor;
 use crate::process::Process;
 use crate::timer::Timer;
-use crate::{arch, NUM_CPUS};
+use crate::{arch, NUM_CPUS, process};
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut, Index, IndexMut};
 use core::ptr::NonNull;
 use core::sync::atomic::AtomicU64;
-use spin::Lazy;
+use spin::{Lazy, MutexGuard};
 
 pub struct PerCpu {
     this: *const UnsafeCell<Self>,
     pub arch: arch::Cpu,
     pub timer: Timer,
     pub executor: Executor,
-    pub running: Option<NonNull<Process>>,
+    pub running: Option<usize>,
 }
 
 impl PerCpu {
@@ -43,14 +43,11 @@ impl PerCpu {
         unsafe { &mut *PER_CPU[arch::cpu_num() as usize].get() }
     }
 
-    pub fn running() -> Option<&'static mut Process> {
-        Self::get_mut()
-            .running
-            .as_mut()
-            .map(|p| unsafe { p.as_mut() })
+    pub fn running() -> Option<usize> {
+        Self::get().running
     }
 
-    pub fn set_running(proc: Option<NonNull<Process>>) {
+    pub fn set_running(proc: Option<usize>) {
         Self::get_mut().running = proc;
     }
 

@@ -14,7 +14,7 @@ pub struct InterruptFrame {
     pub(super) r9: u64,
     pub(super) r8: u64,
     pub(super) rbp: u64,
-    pub(super) rdi: u64,
+    pub(crate) rdi: u64,
     pub(super) rsi: u64,
     pub(super) rdx: u64,
     pub(super) rcx: u64,
@@ -22,10 +22,10 @@ pub struct InterruptFrame {
     pub(super) rax: u64,
     pub(super) interrupt_number: u64,
     pub(super) error_code: u64,
-    pub(super) ip: u64,
+    pub(crate) ip: u64,
     pub(super) cs: u64,
     pub(super) flags: u64,
-    pub(super) user_sp: u64,
+    pub(crate) user_sp: u64,
     pub(super) ss: u64,
 }
 

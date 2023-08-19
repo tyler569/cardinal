@@ -7,7 +7,7 @@ use cardinal3_interface::Syscall;
 
 pub fn handle_syscall(frame: &mut InterruptFrame) {
     let syscall = frame.syscall_info();
-    let pid = PerCpu::running().map(|p| p.id).unwrap_or(0);
+    let pid = PerCpu::running().unwrap_or(0);
 
     println!(
         "[cpu:{} pid:{} syscall:{:?}]",
@@ -22,10 +22,10 @@ pub fn handle_syscall(frame: &mut InterruptFrame) {
             frame.set_syscall_return(string.len());
         }
         &Syscall::Exit(code) => unsafe {
-            let Some(proc) = PerCpu::running() else {
+            let Some(pid) = PerCpu::running() else {
                 panic!("No running process");
             };
-            proc.exit_code = Some(code);
+            process::ALL.lock().get_mut(&pid).unwrap().exit_code = Some(code);
         },
         &Syscall::Spawn(_name, arg) => unsafe {
             let pid = Process::new(&*elf_data(), arg);

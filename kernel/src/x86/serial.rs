@@ -2,6 +2,7 @@ use crate::print::{print, println};
 use crate::x86::pio;
 use alloc::collections::VecDeque;
 use alloc::vec::Vec;
+use core::fmt::Write;
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll, Waker};
@@ -52,7 +53,14 @@ impl SerialPort {
     }
 
     pub fn try_write(&self) -> Option<MutexGuard<SerialPortWriter>> {
-        self.writer.try_lock()
+        let x = self.writer.try_lock();
+
+        // if x.is_none() {
+        //     let mut spw = SerialPortWriter { port: self.port };
+        //     spw.write_str("XXX").unwrap();
+        // }
+
+        x
     }
 
     pub fn read(&self) -> SerialPortReadFuture {

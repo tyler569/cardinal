@@ -43,20 +43,21 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     let mut wants_continue = true;
 
     if (*frame).cs & 0x03 == 0x03 {
-        if let Some(proc) = PerCpu::running() {
+        if let Some(pid) = PerCpu::running() {
+            let mut binding = process::ALL.lock();
+            let mut proc = binding.get_mut(&pid).unwrap();
             proc.context = Context::new(&*frame);
             if proc.exit_code.is_none() {
                 if proc.sched_in + 10 > PerCpu::ticks() {
                     assert_ne!((*frame).ip, 0, "trying to return to 0!");
+                    arch::load_tree(proc.vm_root);
                     return;
                 }
-                process::schedule(proc);
+                process::schedule_pid(pid);
             } else {
                 wants_continue = false;
-                let pid = proc.id;
                 crate::executor::spawn(async move {
                     crate::process::ALL.lock().remove(&pid);
-                    // println!("reaped process {}", pid);
                 })
             }
         }
@@ -68,6 +69,11 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     assert_ne!((*frame).ip, 0, "trying to return to 0!");
 
     if wants_continue {
+        if (*frame).cs & 0x03 == 0x03 {
+            let pid = PerCpu::running().unwrap();
+            let vm_root = process::ALL.lock().get(&pid).unwrap().vm_root;
+            arch::load_tree(vm_root);
+        }
         return;
     } else {
         arch::sleep_forever()

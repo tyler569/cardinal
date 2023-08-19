@@ -16,7 +16,7 @@ impl FpuContext {
 #[derive(Clone)]
 #[repr(C)]
 pub struct Context {
-    pub(super) frame: InterruptFrame,
+    pub(crate) frame: InterruptFrame,
     pub(super) fpu_context: FpuContext,
     pub(super) has_fpu_context: bool,
 }
