@@ -68,14 +68,13 @@ const WAKER_VTABLE: RawWakerVTable =
     RawWakerVTable::new(exec_clone, exec_wake, exec_wake_by_ref, exec_drop);
 
 fn exec_clone(data: *const ()) -> RawWaker {
-    let old_data = unsafe { Box::from_raw(data as *mut WakerData) };
-    let data = Box::into_raw(old_data.clone());
+    let data = Box::into_raw(Box::new(unsafe { *(data as *mut WakerData) }));
     RawWaker::new(data as *const (), &WAKER_VTABLE)
 }
 
 unsafe fn exec_wake(data: *const ()) {
     assert!(arch::interrupts_are_disabled());
-    let wd = *Box::from_raw(data as *mut WakerData);
+    let wd = *(data as *mut WakerData);
     let executor = &PerCpu::for_cpu(wd.cpu as usize).executor;
     executor.tasks_to_poll.lock().push_back(wd.id);
 }
@@ -85,15 +84,15 @@ unsafe fn exec_wake_by_ref(data: *const ()) {
 }
 
 unsafe fn exec_drop(data: *const ()) {
-    let _ = Arc::from_raw(data);
+    let _ = Arc::from_raw(data as *mut WakerData);
 }
 
 fn new_waker(id: u64) -> core::task::Waker {
-    let data = Box::new(WakerData {
+    let data = Arc::new(WakerData {
         cpu: arch::cpu_num(),
         id,
     });
-    let data = Box::into_raw(data);
+    let data = Arc::into_raw(data);
     let raw_waker = RawWaker::new(data as *const (), &WAKER_VTABLE);
     unsafe { core::task::Waker::from_raw(raw_waker) }
 }

@@ -149,11 +149,13 @@ impl Allocator {
                     region.slice().fill(b'A');
                 }
 
+                assert!(region.size >= layout.size(), "region {} < layout {}", region.size, layout.size());
+
                 // return the memory
                 return Ok(unsafe {
                     NonNull::slice_from_raw_parts(
                         NonNull::new_unchecked(region.memory()),
-                        layout.size(),
+                        region.size,
                     )
                 });
             }
@@ -165,7 +167,7 @@ impl Allocator {
     fn deallocate(&mut self, ptr: NonNull<u8>, layout: Layout) {
         let region = unsafe { transmute::<_, *mut Link>(ptr.as_ptr()).offset(-1) };
         let region = unsafe { &mut *region };
-        assert_eq!(region.state, State::Allocated);
+        assert_eq!(region.state, State::Allocated, "double free!");
         assert_eq!(region.magic, Link::MAGIC);
         assert!(region.size >= layout.size(), "region {} < layout {}", region.size, layout.size());
 
