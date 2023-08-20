@@ -1,15 +1,11 @@
-mod ethernet;
-mod icmp;
-mod ipv4;
 mod packet;
+mod proto;
+pub mod socket;
 
-pub use ethernet::EthernetHeader;
-pub use ethernet::MacAddress;
-pub use icmp::IcmpHeader;
-pub use ipv4::Ipv4Address;
-pub use ipv4::Ipv4Header;
-pub use ipv4::Ipv4Protocol;
 pub use packet::Packet;
+pub use socket::Socket;
+
+pub use proto::ethernet::MacAddress;
 
 pub trait Header: Sized {
     fn compute_checksum(&mut self, data: &[u8]);

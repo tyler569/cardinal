@@ -8,7 +8,7 @@ use alloc::vec::Vec;
 use bitflags::Flags;
 use core::arch::asm;
 use core::ptr::NonNull;
-use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use elf::endian::LittleEndian;
 use spin::Mutex;
 
@@ -21,7 +21,7 @@ pub struct Process {
     pub state: ProcessState,
     pub pending_signals: u64,
     pub exit_code: Option<u32>,
-    pub id: usize,
+    pub pid: u64,
     pub sched_in: u64,
 }
 
@@ -40,7 +40,7 @@ pub enum ProcessState {
 static DO_IT_ONCE: AtomicBool = AtomicBool::new(true);
 
 impl Process {
-    pub unsafe fn new(elf_data: &[u8], arg: usize) -> usize {
+    pub unsafe fn new(elf_data: &[u8], arg: usize) -> u64 {
         let efile = elf::ElfBytes::<LittleEndian>::minimal_parse(elf_data).unwrap();
         let vm_root = arch::new_tree();
         let mut context = Context::new_user(efile.ehdr.e_entry as usize);
@@ -84,7 +84,7 @@ impl Process {
 
         context.set_arg1(arg as u64);
 
-        let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
+        let pid = NEXT_PID.fetch_add(1, Ordering::SeqCst);
 
         let process = Self {
             context,
@@ -92,16 +92,16 @@ impl Process {
             state: ProcessState::Running,
             pending_signals: 0,
             exit_code: None,
-            id,
+            pid,
             sched_in: 0,
         };
 
-        ALL.lock().insert(id, process);
-        println!("[cpu:{} created pid:{}]", arch::cpu_num(), id);
-        id
+        ALL.lock().insert(pid, process);
+        println!("[cpu:{} created pid:{}]", arch::cpu_num(), pid);
+        pid
     }
 
-    pub fn run(id: usize) -> ! {
+    pub fn run(id: u64) -> ! {
         println!("[cpu:{} running pid:{}]", arch::cpu_num(), id);
         let context = unsafe {
             let mut binding = ALL.lock();
@@ -118,19 +118,19 @@ impl Process {
 impl Drop for Process {
     fn drop(&mut self) {
         arch::free_tree(self.vm_root);
-        println!("[cpu:{} dropped pid:{}]", arch::cpu_num(), self.id);
+        println!("[cpu:{} dropped pid:{}]", arch::cpu_num(), self.pid);
     }
 }
 
-static NEXT_ID: AtomicUsize = AtomicUsize::new(1);
-pub static ALL: Mutex<BTreeMap<usize, Process>> = Mutex::new(BTreeMap::new());
-pub static RUNNABLE: Mutex<VecDeque<usize>> = Mutex::new(VecDeque::new());
+static NEXT_PID: AtomicU64 = AtomicU64::new(1);
+pub static ALL: Mutex<BTreeMap<u64, Process>> = Mutex::new(BTreeMap::new());
+pub static RUNNABLE: Mutex<VecDeque<u64>> = Mutex::new(VecDeque::new());
 
 pub fn schedule(proc: &Process) {
-    schedule_pid(proc.id);
+    schedule_pid(proc.pid);
 }
 
-pub fn schedule_pid(pid: usize) {
+pub fn schedule_pid(pid: u64) {
     let mut handle = RUNNABLE.lock();
     // assert!(handle.iter().all(|&p| p != pid), "double scheduling {}!", pid);
     if handle.iter().any(|&p| p == pid) {

@@ -26,9 +26,3 @@ impl IcmpHeader {
         header
     }
 }
-
-impl super::Header for IcmpHeader {
-    fn compute_checksum(&mut self, data: &[u8]) {
-        todo!()
-    }
-}

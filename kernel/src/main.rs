@@ -6,6 +6,7 @@
 #![feature(slice_ptr_get)]
 #![feature(pointer_byte_offsets)]
 #![feature(int_roundings)]
+#![feature(slice_ptr_len)]
 
 extern crate alloc;
 

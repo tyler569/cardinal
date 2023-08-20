@@ -5,6 +5,8 @@ use core::ops::Deref;
 use core::ptr::NonNull;
 use spin::{Mutex, MutexGuard};
 
+const DEBUG_FILL: bool = true;
+
 struct Allocator {
     head: Option<NonNull<Link>>,
     memory: [u8; 0x100000],
@@ -25,6 +27,10 @@ struct Link {
 impl Link {
     fn memory(&self) -> *mut u8 {
         unsafe { (self as *const Link).offset(1) as *mut u8 }
+    }
+
+    fn slice(&mut self) -> &mut [u8] {
+        unsafe { core::slice::from_raw_parts_mut(self.memory(), self.size) }
     }
 }
 
@@ -129,6 +135,9 @@ impl Allocator {
                 self.split_region(region, layout);
 
                 region.state = State::Allocated;
+                if DEBUG_FILL {
+                    region.slice().fill(b'A');
+                }
 
                 // return the memory
                 return Ok(unsafe {
@@ -150,6 +159,9 @@ impl Allocator {
         assert!(region.size >= layout.size());
 
         region.state = State::Free;
+        if DEBUG_FILL {
+            region.slice().fill(b'F');
+        }
 
         if let Some(mut next) = region.next {
             self.try_merge_regions((region, unsafe { next.as_mut() }));

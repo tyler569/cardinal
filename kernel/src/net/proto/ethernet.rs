@@ -41,7 +41,3 @@ impl EthernetHeader {
         }
     }
 }
-
-impl super::Header for EthernetHeader {
-    fn compute_checksum(&mut self, data: &[u8]) {}
-}

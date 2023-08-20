@@ -3,10 +3,11 @@ use crate::per_cpu::PerCpu;
 use crate::print::println;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, VecDeque};
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::future::Future;
 use core::pin::Pin;
-use core::sync::atomic::AtomicBool;
+use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use core::task::{Context, Poll, RawWaker, RawWakerVTable};
 use spin::Mutex;
 
@@ -18,9 +19,9 @@ struct Task {
 
 pub struct Executor {
     work_to_do: AtomicBool,
-    tasks_to_poll: Mutex<VecDeque<usize>>,
-    next_id: usize,
-    tasks: BTreeMap<usize, Task>,
+    tasks_to_poll: Mutex<VecDeque<u64>>,
+    next_id: AtomicU64,
+    tasks: BTreeMap<u64, Task>,
 }
 
 impl Executor {
@@ -28,15 +29,14 @@ impl Executor {
         Self {
             work_to_do: AtomicBool::new(false),
             tasks_to_poll: Mutex::new(VecDeque::new()),
-            next_id: 0,
+            next_id: AtomicU64::new(1),
             tasks: BTreeMap::new(),
         }
     }
 
     pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
         assert!(arch::interrupts_are_disabled());
-        let id = self.next_id;
-        self.next_id += 1;
+        let id = self.next_id.fetch_add(1, Ordering::SeqCst);
         let task = Task {
             future: Box::pin(future),
         };
@@ -58,18 +58,26 @@ impl Executor {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+struct WakerData {
+    cpu: u32,
+    id: u64,
+}
+
 const WAKER_VTABLE: RawWakerVTable =
     RawWakerVTable::new(exec_clone, exec_wake, exec_wake_by_ref, exec_drop);
 
 fn exec_clone(data: *const ()) -> RawWaker {
-    RawWaker::new(data, &WAKER_VTABLE)
+    let old_data = unsafe { Box::from_raw(data as *mut WakerData) };
+    let data = Box::into_raw(old_data.clone());
+    RawWaker::new(data as *const (), &WAKER_VTABLE)
 }
 
 unsafe fn exec_wake(data: *const ()) {
     assert!(arch::interrupts_are_disabled());
-    let id = data as usize;
-    let executor = &PerCpu::get().executor;
-    executor.tasks_to_poll.lock().push_back(id);
+    let wd = *Box::from_raw(data as *mut WakerData);
+    let executor = &PerCpu::for_cpu(wd.cpu as usize).executor;
+    executor.tasks_to_poll.lock().push_back(wd.id);
 }
 
 unsafe fn exec_wake_by_ref(data: *const ()) {
@@ -77,10 +85,16 @@ unsafe fn exec_wake_by_ref(data: *const ()) {
 }
 
 unsafe fn exec_drop(data: *const ()) {
+    let _ = Arc::from_raw(data);
 }
 
-fn new_waker(id: usize) -> core::task::Waker {
-    let raw_waker = RawWaker::new(id as *const (), &WAKER_VTABLE);
+fn new_waker(id: u64) -> core::task::Waker {
+    let data = Box::new(WakerData {
+        cpu: arch::cpu_num(),
+        id,
+    });
+    let data = Box::into_raw(data);
+    let raw_waker = RawWaker::new(data as *const (), &WAKER_VTABLE);
     unsafe { core::task::Waker::from_raw(raw_waker) }
 }
 

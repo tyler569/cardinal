@@ -13,7 +13,7 @@ pub struct PerCpu {
     pub arch: arch::Cpu,
     pub timer: Timer,
     pub executor: Executor,
-    pub running: Option<usize>,
+    pub running: Option<u64>,
 }
 
 impl PerCpu {
@@ -43,11 +43,19 @@ impl PerCpu {
         unsafe { &mut *PER_CPU[arch::cpu_num() as usize].get() }
     }
 
-    pub fn running() -> Option<usize> {
+    pub fn for_cpu(cpu: usize) -> &'static Self {
+        unsafe { &*PER_CPU[cpu].get() }
+    }
+
+    pub fn for_cpu_mut(cpu: usize) -> &'static mut Self {
+        unsafe { &mut *PER_CPU[cpu].get() }
+    }
+
+    pub fn running() -> Option<u64> {
         Self::get().running
     }
 
-    pub fn set_running(proc: Option<usize>) {
+    pub fn set_running(proc: Option<u64>) {
         Self::get_mut().running = proc;
     }
 

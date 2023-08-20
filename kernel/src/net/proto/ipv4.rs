@@ -70,12 +70,6 @@ impl Ipv4Header {
     }
 }
 
-impl super::Header for Ipv4Header {
-    fn compute_checksum(&mut self, data: &[u8]) {
-        todo!()
-    }
-}
-
 #[repr(u8)]
 #[derive(Debug, Copy, Clone)]
 pub enum Ipv4Protocol {

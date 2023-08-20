@@ -25,3 +25,15 @@ pub fn exit(code: u32) -> ! {
 pub fn spawn(name: &str, arg: usize) -> usize {
     syscall(&Syscall::Spawn(name, arg))
 }
+
+pub fn socket() -> u64 {
+    syscall(&Syscall::DgSocket) as u64
+}
+
+pub fn write(sn: u64, data: &[u8]) -> usize {
+    syscall(&Syscall::DgWrite(sn, data))
+}
+
+pub fn async_read(sn: u64, data: &mut [u8]) -> u64 {
+    syscall(&Syscall::DgRead(sn, data)) as u64
+}
