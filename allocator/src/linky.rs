@@ -19,12 +19,15 @@ enum State {
 }
 
 struct Link {
+    magic: u64,
     next: Option<NonNull<Link>>,
     size: usize,
     state: State,
 }
 
 impl Link {
+    const MAGIC: u64 = 0x9f17_028a_3b7c_5d6e;
+
     fn memory(&self) -> *mut u8 {
         unsafe { (self as *const Link).offset(1) as *mut u8 }
     }
@@ -59,6 +62,7 @@ impl Allocator {
     pub unsafe fn init(&mut self) {
         let head_ptr = transmute::<_, *mut Link>(self.memory.as_mut_ptr());
         *head_ptr = Link {
+            magic: Link::MAGIC,
             next: None,
             size: self.memory.len() - size_of::<Link>(),
             state: State::Free,
@@ -75,11 +79,8 @@ impl Allocator {
         let size = {
             let here = region.memory() as usize;
             let next = here + size + size_of::<Link>();
-            if next % 16 == 0 {
-                size
-            } else {
-                size + 16 - (next % 16)
-            }
+            let rounded_next = next.next_multiple_of(16);
+            size + rounded_next - next
         };
 
         // check if we have enough size to split
@@ -92,6 +93,7 @@ impl Allocator {
             let new_region_ptr = region.memory().add(size) as *mut Link;
 
             *new_region_ptr = Link {
+                magic: Link::MAGIC,
                 next: region.next,
                 size: region.size - size - size_of::<Link>(),
                 state: State::Free,
@@ -111,8 +113,15 @@ impl Allocator {
             return;
         }
 
+        assert_eq!(first.magic, Link::MAGIC);
+        assert_eq!(second.magic, Link::MAGIC);
+
         first.next = second.next;
         first.size = first.size + second.size + size_of::<Link>();
+
+        if DEBUG_FILL {
+            first.slice().fill(b'G');
+        }
     }
 
     fn merge_all_regions(&mut self) {
@@ -130,6 +139,7 @@ impl Allocator {
         let mut current = self.head;
         while let Some(mut region) = current {
             let region = unsafe { region.as_mut() };
+            assert_eq!(region.magic, Link::MAGIC);
             if region.size >= layout.size() && region.state == State::Free {
                 // split the region
                 self.split_region(region, layout);
@@ -156,7 +166,8 @@ impl Allocator {
         let region = unsafe { transmute::<_, *mut Link>(ptr.as_ptr()).offset(-1) };
         let region = unsafe { &mut *region };
         assert_eq!(region.state, State::Allocated);
-        assert!(region.size >= layout.size());
+        assert_eq!(region.magic, Link::MAGIC);
+        assert!(region.size >= layout.size(), "region {} < layout {}", region.size, layout.size());
 
         region.state = State::Free;
         if DEBUG_FILL {
