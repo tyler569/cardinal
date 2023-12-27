@@ -4,7 +4,6 @@
 #![feature(naked_functions)]
 #![feature(allocator_api)]
 #![feature(slice_ptr_get)]
-#![feature(pointer_byte_offsets)]
 #![feature(int_roundings)]
 #![feature(slice_ptr_len)]
 
@@ -58,7 +57,7 @@ unsafe extern "C" fn kernel_main() -> ! {
     println!("spawning sleep task");
     executor::spawn(async {
         loop {
-            executor::sleep::sleep(Duration::from_millis(300)).await;
+            executor::sleep::sleep(Duration::from_secs(1)).await;
             print!(".")
         }
     });
@@ -147,7 +146,7 @@ unsafe fn start_aps() {
     let smp = &**limine::SMP.response.get();
 
     for cpu in smp.cpus_slice().iter().skip(1) {
-        (**cpu).goto_address = ap_init;
+        *(**cpu).goto_address.get_mut() = ap_init;
     }
 }
 

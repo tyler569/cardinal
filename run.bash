@@ -29,7 +29,7 @@ done
 qemu-system-x86_64 \
   -cdrom ./cardinal3.iso \
   -vga std \
-  -smp 3 \
+  -smp 8 \
   -m 128M \
   -display none \
   -netdev user,id=nic \
