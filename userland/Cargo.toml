@@ -8,6 +8,7 @@ edition = "2021"
 [lib]
 
 [dependencies]
+cardinal3-allocator = { path = "../allocator" }
 cardinal3-interface = { path = "../interface" }
 
 [profile.dev]
