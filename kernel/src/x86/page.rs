@@ -331,3 +331,85 @@ pub unsafe fn init() {
     (*root).entries[257].set(0, 0);
     KERNEL_ROOT.call_once(|| root as usize);
 }
+/*
+bitflags! {
+    pub struct EntryFlags: u64 {
+        const PRESENT = 1 << 0;
+        const WRITABLE = 1 << 1;
+        const USER_ACCESSIBLE = 1 << 2;
+        const WRITE_THROUGH = 1 << 3;
+        const NO_CACHE = 1 << 4;
+        const ACCESSED = 1 << 5;
+        const DIRTY = 1 << 6;
+        const HUGE_PAGE = 1 << 7;
+        const GLOBAL = 1 << 8;
+        const NO_EXECUTE = 1 << 63;
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Entry(u64);
+pub struct Table([Entry; 512]);
+
+pub enum EntryValue {
+    NextTable(u64),
+    Frame(u64, usize),
+    Nothing,
+}
+
+impl Entry {
+    pub fn flags(self) -> EntryFlags {
+        EntryFlags::from_bits_truncate(self.0)
+    }
+
+    pub fn value(self) -> Option<u64> {
+        if self.flags().contains(EntryFlags::PRESENT) {
+            Some(self.0 & 0x000fffff_fffff000)
+        } else {
+            None
+        }
+    }
+}
+
+fn addr_to_table(addr: u64) -> &'static mut Table {
+    unsafe { &mut *(arch::direct_map_offset(addr) as *mut Table) }
+}
+
+fn resolve_one(table: &Table, virtual_address: usize, level: i32) -> EntryValue {
+    let index = (virtual_address >> (12 + 9 * level)) & 0o777;
+    let entry_flags = table.0[index].flags();
+    return if !entry_flags.contains(EntryFlags::PRESENT) {
+        EntryValue::Nothing
+    } else if level == 0 || entry_flags.contains(EntryFlags::HUGE_PAGE) {
+        let frame_address = table.0[index].value().unwrap();
+        let frame_mask = if entry_flags.contains(EntryFlags::HUGE_PAGE) {
+            0x0001_0000_0000_0000 - (1 << 12 + 9 * level)
+        } else {
+            0x0000_ffff_ffff_f000
+        };
+        EntryValue::Frame(table.0[index].value().unwrap(), frame_mask)
+    } else {
+        let next_table_address = table.0[index].value().unwrap();
+        EntryValue::NextTable(next_table_address)
+    }
+}
+
+pub fn resolve(root: &Table, virtual_address: usize) -> EntryValue {
+    let mut table = root;
+    let mut value = EntryValue::Nothing;
+    for level in (0..4).rev() {
+        match resolve_one(table, virtual_address, level) {
+            EntryValue::NextTable(address) => {
+                table = addr_to_table(address);
+            }
+            EntryValue::Frame(address, mask) => {
+                value = EntryValue::Frame(address, mask);
+            }
+            EntryValue::Nothing => {
+                break;
+            }
+        }
+    }
+    return value;
+}
+ */
