@@ -8,7 +8,7 @@ use alloc::vec::Vec;
 use core::future::Future;
 use core::pin::Pin;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use core::task::{Context, Poll, RawWaker, RawWakerVTable};
+use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 use spin::Mutex;
 
 pub mod sleep;
@@ -68,7 +68,9 @@ const WAKER_VTABLE: RawWakerVTable =
     RawWakerVTable::new(exec_clone, exec_wake, exec_wake_by_ref, exec_drop);
 
 fn exec_clone(data: *const ()) -> RawWaker {
-    let data = Box::into_raw(Box::new(unsafe { *(data as *mut WakerData) }));
+    let new_ref = unsafe { Arc::from_raw(data as *const WakerData) };
+    let data = Arc::into_raw(new_ref.clone());
+    let _ = Arc::into_raw(new_ref);
     RawWaker::new(data as *const (), &WAKER_VTABLE)
 }
 
@@ -87,14 +89,14 @@ unsafe fn exec_drop(data: *const ()) {
     let _ = Arc::from_raw(data as *mut WakerData);
 }
 
-fn new_waker(id: u64) -> core::task::Waker {
+fn new_waker(id: u64) -> Waker {
     let data = Arc::new(WakerData {
         cpu: arch::cpu_num(),
         id,
     });
     let data = Arc::into_raw(data);
     let raw_waker = RawWaker::new(data as *const (), &WAKER_VTABLE);
-    unsafe { core::task::Waker::from_raw(raw_waker) }
+    unsafe { Waker::from_raw(raw_waker) }
 }
 
 pub fn spawn(future: impl Future<Output = ()> + 'static) {
