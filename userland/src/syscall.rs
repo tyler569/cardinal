@@ -1,4 +1,4 @@
-use cardinal3_interface::Syscall;
+use cardinal3_interface::{Syscall, TaskId};
 use core::arch::asm;
 
 fn syscall(args: &Syscall) -> usize {
@@ -36,4 +36,8 @@ pub fn write(sn: u64, data: &[u8]) -> usize {
 
 pub fn async_read(sn: u64, data: &mut [u8]) -> u64 {
     syscall(&Syscall::DgRead(sn, data)) as u64
+}
+
+pub fn async_read_2(sn: u64, data: &mut [u8], task_id: TaskId) -> u64 {
+    syscall(&Syscall::ReadAsync(sn, data, task_id)) as u64
 }

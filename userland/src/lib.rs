@@ -8,6 +8,7 @@ pub use cardinal3_allocator as allocator;
 
 pub mod syscall;
 pub mod executor;
+mod async_rw;
 
 #[global_allocator]
 static ALLOCATOR: allocator::linky::LockedAllocator = allocator::linky::new();
