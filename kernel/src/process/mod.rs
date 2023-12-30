@@ -2,7 +2,7 @@ use crate::arch::{Context, PageTable};
 use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::vmm::PageFlags;
-use crate::{arch, pmm, vmm};
+use crate::{arch, elf_data, pmm, vmm};
 use alloc::collections::{BTreeMap, VecDeque};
 use alloc::vec::Vec;
 use bitflags::Flags;
@@ -144,4 +144,20 @@ pub fn run_usermode_program() {
         return;
     };
     Process::run(pid)
+}
+
+pub fn exit(code: u32) -> u64 {
+    let Some(pid) = PerCpu::running() else {
+        panic!("No running process");
+    };
+    ALL.lock().get_mut(&pid).unwrap().exit_code = Some(code);
+    code as u64
+}
+
+pub fn spawn(_name: &str, arg: usize) -> u64 {
+    unsafe {
+        let pid = Process::new(&*elf_data(), arg);
+        schedule_pid(pid);
+        pid
+    }
 }

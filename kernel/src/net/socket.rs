@@ -1,4 +1,4 @@
-use crate::arch;
+use crate::{arch, process};
 use crate::net::Packet;
 use crate::per_cpu::PerCpu;
 use alloc::collections::{BTreeMap, VecDeque};
@@ -8,6 +8,7 @@ use core::pin::Pin;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use core::task::{Context, Poll, Waker};
 use spin::Mutex;
+use crate::print::println;
 
 pub struct Socket {
     id: u64,
@@ -85,3 +86,28 @@ impl Future for SocketRead {
 }
 
 pub static ALL: Mutex<BTreeMap<u64, Socket>> = Mutex::new(BTreeMap::new());
+
+pub fn read(sn: u64, buf: *mut [u8]) -> u64 {
+    let task = {
+        let binding = ALL.lock();
+        let socket = binding.get(&sn).unwrap();
+        socket.read(buf)
+    };
+    let pid = PerCpu::running().unwrap();
+    crate::executor::spawn(async move {
+        task.await;
+        process::ALL
+            .lock()
+            .get_mut(&pid)
+            .map(|proc| proc.pending_signals |= 0x01);
+        println!("read completed");
+    });
+    0
+}
+
+pub fn write(sn: u64, buf: &[u8]) -> u64 {
+    let binding = crate::net::socket::ALL.lock();
+    let socket = binding.get(&sn).unwrap();
+    let packet = Packet::new(buf);
+    socket.write(packet) as u64
+}
