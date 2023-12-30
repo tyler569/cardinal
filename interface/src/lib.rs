@@ -18,11 +18,17 @@ pub enum Syscall<'a> {
 
     // DgWriteAsync(u64, &'a [u8], TaskId),
     ReadAsync(u64, &'a [u8], TaskId),
-
     // Wait(&'a [TaskId])
 }
 
+#[derive(Copy, Clone, Debug)]
 pub enum Error {
     EAGAIN = 1,
     EINVAL = 2,
+}
+
+impl Error {
+    pub fn return_value(self) -> usize {
+        !(self as usize)
+    }
 }
