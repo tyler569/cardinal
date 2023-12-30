@@ -113,10 +113,17 @@ impl Process {
 
         unsafe { arch::long_jump_context(&context) }
     }
+
+    pub fn time_expired(&self) -> bool {
+        self.sched_in + 10 > PerCpu::ticks()
+    }
 }
 
 impl Drop for Process {
     fn drop(&mut self) {
+        if RUNNABLE.lock().iter().any(|&pid| pid == self.pid) {
+            panic!("dropping process that exists on the runnable queue");
+        }
         arch::free_tree(self.vm_root);
         println!("[cpu:{} dropped pid:{}]", arch::cpu_num(), self.pid);
     }
@@ -139,7 +146,7 @@ pub fn schedule_pid(pid: u64) {
     handle.push_back(pid);
 }
 
-pub fn run_usermode_program() {
+pub fn maybe_run_usermode_program() {
     let Some(pid) = RUNNABLE.lock().pop_front() else {
         return;
     };
@@ -150,7 +157,7 @@ pub fn exit(code: u32) -> u64 {
     let Some(pid) = PerCpu::running() else {
         panic!("No running process");
     };
-    ALL.lock().get_mut(&pid).unwrap().exit_code = Some(code);
+    with(pid, |p| p.exit_code = Some(code));
     code as u64
 }
 

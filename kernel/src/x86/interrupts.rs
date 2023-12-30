@@ -23,58 +23,65 @@ static INTERRUPT_COUNT: AtomicU64 = AtomicU64::new(0);
 
 #[no_mangle]
 unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
+    let frame = &mut *frame;
+
     let bp: usize;
     asm!("mov {}, rbp", out(reg) bp, options(nostack));
     assert_eq!(bp & 0xf, 0, "stack not aligned to 16 bytes");
 
     let count = INTERRUPT_COUNT.fetch_add(1, Ordering::Relaxed);
-    let from_usermode = (*frame).cs & 0x03 == 0x03;
+    let from_usermode = frame.cs & 0x03 == 0x03;
 
     match (*frame).interrupt_number {
-        3 => handle_breakpoint(&mut *frame),
-        14 => handle_page_fault(&mut *frame),
-        32..=47 => handle_irq(&mut *frame),
-        128 => handle_syscall(&mut *frame),
-        129 => handle_ipi(&mut *frame),
-        130 => handle_ipi_panic(&mut *frame),
-        _ => unexpected_interrupt(&*frame),
+        3 => handle_breakpoint(frame),
+        14 => handle_page_fault(frame),
+        32..=47 => handle_irq(frame),
+        128 => handle_syscall(frame),
+        129 => handle_ipi(frame),
+        130 => handle_ipi_panic(frame),
+        _ => unexpected_interrupt(frame),
     }
 
     let mut wants_continue = true;
+    let old_pid = PerCpu::running();
 
     if from_usermode {
-        let pid = PerCpu::running().expect("No running usermode process");
+        let pid = old_pid.expect("No running usermode process");
         let mut binding = process::ALL.lock();
-        let mut proc = binding.get_mut(&pid).unwrap();
-        proc.context = Context::new(&*frame);
-        if proc.exit_code.is_none() {
-            if proc.sched_in + 10 > PerCpu::ticks() {
-                assert_ne!((*frame).ip, 0, "trying to return to 0!");
-                arch::load_tree(proc.vm_root);
-                return;
+        if let Some(mut proc) = binding.get_mut(&pid) {
+            proc.context = Context::new(frame);
+            if proc.exit_code.is_some() {
+                wants_continue = false;
+                executor::spawn(async move {
+                    process::ALL.lock().remove(&pid);
+                })
+            } else {
+                if proc.time_expired() {
+                    process::schedule_pid(pid);
+                } else {
+                    arch::load_tree(proc.vm_root);
+                    assert_ne!(frame.ip, 0, "trying to return to 0!");
+                    return;
+                }
             }
-            process::schedule_pid(pid);
-        } else {
-            wants_continue = false;
-            executor::spawn(async move {
-                process::ALL.lock().remove(&pid);
-            })
         }
-        PerCpu::set_running(None);
     }
 
-    process::run_usermode_program();
-
-    assert_ne!((*frame).ip, 0, "trying to return to 0!");
+    process::maybe_run_usermode_program();
 
     if wants_continue {
-        if (*frame).cs & 0x03 == 0x03 {
+        if from_usermode {
             let pid = PerCpu::running().unwrap();
-            let vm_root = process::ALL.lock().get(&pid).unwrap().vm_root;
+            let Some(vm_root) = process::with(pid, |p| p.vm_root) else {
+                PerCpu::set_running(None);
+                arch::sleep_forever()
+            };
             arch::load_tree(vm_root);
         }
+        assert_ne!(frame.ip, 0, "trying to return to 0!");
         return;
     } else {
+        PerCpu::set_running(None);
         arch::sleep_forever()
     }
 }
