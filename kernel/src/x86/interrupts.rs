@@ -3,8 +3,8 @@ use crate::print::{print, println};
 use crate::process::Process;
 use crate::x86::context::{Context, InterruptFrame};
 use crate::x86::cpu::cpu_num;
-use crate::x86::{cpu, lapic, print_backtrace_from, SERIAL};
-use crate::{arch, process, x86};
+use crate::x86::{cpu, lapic, print_backtrace_from, SERIAL, sleep_forever_no_irq};
+use crate::{arch, executor, process, syscalls};
 use core::arch::asm;
 use core::cell::UnsafeCell;
 use core::ops::Deref;
@@ -28,6 +28,7 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     assert_eq!(bp & 0xf, 0, "stack not aligned to 16 bytes");
 
     let count = INTERRUPT_COUNT.fetch_add(1, Ordering::Relaxed);
+    let from_usermode = (*frame).cs & 0x03 == 0x03;
 
     match (*frame).interrupt_number {
         3 => handle_breakpoint(&mut *frame),
@@ -41,24 +42,23 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
 
     let mut wants_continue = true;
 
-    if (*frame).cs & 0x03 == 0x03 {
-        if let Some(pid) = PerCpu::running() {
-            let mut binding = process::ALL.lock();
-            let mut proc = binding.get_mut(&pid).unwrap();
-            proc.context = Context::new(&*frame);
-            if proc.exit_code.is_none() {
-                if proc.sched_in + 10 > PerCpu::ticks() {
-                    assert_ne!((*frame).ip, 0, "trying to return to 0!");
-                    arch::load_tree(proc.vm_root);
-                    return;
-                }
-                process::schedule_pid(pid);
-            } else {
-                wants_continue = false;
-                crate::executor::spawn(async move {
-                    crate::process::ALL.lock().remove(&pid);
-                })
+    if from_usermode {
+        let pid = PerCpu::running().expect("No running usermode process");
+        let mut binding = process::ALL.lock();
+        let mut proc = binding.get_mut(&pid).unwrap();
+        proc.context = Context::new(&*frame);
+        if proc.exit_code.is_none() {
+            if proc.sched_in + 10 > PerCpu::ticks() {
+                assert_ne!((*frame).ip, 0, "trying to return to 0!");
+                arch::load_tree(proc.vm_root);
+                return;
             }
+            process::schedule_pid(pid);
+        } else {
+            wants_continue = false;
+            executor::spawn(async move {
+                process::ALL.lock().remove(&pid);
+            })
         }
         PerCpu::set_running(None);
     }
@@ -156,7 +156,7 @@ fn handle_serial(frame: &mut InterruptFrame) {
 }
 
 fn handle_syscall(frame: &mut InterruptFrame) {
-    crate::syscalls::handle_syscall(frame);
+    syscalls::handle_syscall(frame);
 }
 
 fn handle_ipi(frame: &mut InterruptFrame) {
@@ -167,7 +167,7 @@ fn handle_ipi(frame: &mut InterruptFrame) {
 
 fn handle_ipi_panic(frame: &mut InterruptFrame) {
     println!("CPU {} stopping due to panic on another CPU", cpu_num());
-    x86::sleep_forever_no_irq();
+    sleep_forever_no_irq();
 }
 
 fn unexpected_interrupt(frame: &InterruptFrame) {

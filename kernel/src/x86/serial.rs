@@ -81,7 +81,7 @@ impl SerialPortWriter {
     }
 }
 
-impl core::fmt::Write for SerialPortWriter {
+impl Write for SerialPortWriter {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         unsafe {
             for b in s.bytes() {
