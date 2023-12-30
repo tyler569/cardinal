@@ -103,14 +103,13 @@ impl Process {
 
     pub fn run(id: u64) -> ! {
         println!("[cpu:{} running pid:{}]", arch::cpu_num(), id);
-        let context = unsafe {
-            let mut binding = ALL.lock();
-            let process = binding.get_mut(&id).unwrap();
-            process.sched_in = PerCpu::ticks();
+        let context = with(id, |p| {
+            p.sched_in = PerCpu::ticks();
             PerCpu::set_running(Some(id));
-            arch::load_tree(process.vm_root);
-            process.context.clone()
-        };
+            arch::load_tree(p.vm_root);
+            p.context.clone()
+        }).expect("Tried to load a process that doesn't exist");
+
         unsafe { arch::long_jump_context(&context) }
     }
 }
@@ -160,4 +159,8 @@ pub fn spawn(_name: &str, arg: usize) -> u64 {
         schedule_pid(pid);
         pid
     }
+}
+
+pub fn with<T, F: FnOnce(&mut Process) -> T>(pid: u64, func: F) -> Option<T> {
+    ALL.lock().get_mut(&pid).map(func)
 }
