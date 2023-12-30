@@ -1,7 +1,5 @@
 #![no_std]
 
-extern crate alloc;
-
 #[repr(C)]
 #[derive(Debug)]
 pub struct TaskId(pub u64);
