@@ -4,8 +4,9 @@ set -euo pipefail
 
 stdio_usage="-serial stdio"
 debug="-s"
+smp="-smp 8"
 
-while getopts ":imd" opt; do
+while getopts "imdu:" opt; do
   case ${opt} in
     i)
       stdio_usage="-d int -serial unix:./serial,nowait,server"
@@ -15,6 +16,9 @@ while getopts ":imd" opt; do
       ;;
     d)
       debug="-s -S"
+      ;;
+    u)
+      smp="-smp $OPTARG"
       ;;
     \?)
       echo "Usage: run.bash [-im]"
@@ -29,7 +33,7 @@ done
 qemu-system-x86_64 \
   -cdrom ./cardinal3.iso \
   -vga std \
-  -smp 8 \
+  $smp \
   -m 128M \
   -display none \
   -netdev user,id=nic \
