@@ -18,18 +18,21 @@ pub fn handle_syscall(frame: &mut InterruptFrame) {
     );
 
     let result = match syscall {
-        &Syscall::Println(string) => 0,
-        &Syscall::Exit(code) => process::exit(code),
-        &Syscall::Spawn(name, arg) => process::spawn(name, arg),
-        &Syscall::DgSocket => Socket::new(),
+        &Syscall::Println(string) => Ok(0),
+        &Syscall::Exit(code) => Ok(process::exit(code)),
+        &Syscall::Spawn(name, arg) => Ok(process::spawn(name, arg)),
+        &Syscall::DgSocket => Ok(Socket::new()),
         &Syscall::DgRead(sn, buf) => socket::read(sn, buf),
         &Syscall::DgWrite(sn, buf) => socket::write(sn, buf),
-        &Syscall::ReadAsync(..) => 0,
+        &Syscall::ReadAsync(..) => Ok(0),
         _ => {
             println!("Unknown syscall");
-            Error::EINVAL as u64
+            Err(Error::EINVAL)
         }
     };
 
-    frame.set_syscall_return(result as usize);
+    match result {
+        Ok(value) => frame.set_syscall_return(value as usize),
+        Err(err) => frame.set_syscall_return(err.return_value()),
+    }
 }

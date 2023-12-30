@@ -3,6 +3,7 @@ use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::{arch, process};
 use alloc::collections::{BTreeMap, VecDeque};
+use cardinal3_interface::Error;
 use core::cmp::{max, min};
 use core::future::Future;
 use core::pin::Pin;
@@ -83,10 +84,12 @@ impl Future for SocketRead {
 
 pub static ALL: Mutex<BTreeMap<u64, Socket>> = Mutex::new(BTreeMap::new());
 
-pub fn read(sn: u64, buf: *mut [u8]) -> u64 {
+pub fn read(sn: u64, buf: *mut [u8]) -> Result<u64, Error> {
     let task = {
         let binding = ALL.lock();
-        let socket = binding.get(&sn).unwrap();
+        let Some(socket) = binding.get(&sn) else {
+            return Err(Error::EINVAL);
+        };
         socket.read(buf)
     };
     let pid = PerCpu::running().unwrap();
@@ -95,12 +98,14 @@ pub fn read(sn: u64, buf: *mut [u8]) -> u64 {
         process::with(pid, |p| p.pending_signals |= 1);
         println!("[KERNEL: read completed]");
     });
-    0
+    Ok(0)
 }
 
-pub fn write(sn: u64, buf: &[u8]) -> u64 {
-    let binding = crate::net::socket::ALL.lock();
-    let socket = binding.get(&sn).unwrap();
+pub fn write(sn: u64, buf: &[u8]) -> Result<u64, Error> {
+    let binding = ALL.lock();
+    let Some(socket) = binding.get(&sn) else {
+        return Err(Error::EINVAL);
+    };
     let packet = Packet::new(buf);
-    socket.write(packet) as u64
+    Ok(socket.write(packet) as u64)
 }
