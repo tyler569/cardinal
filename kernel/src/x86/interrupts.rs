@@ -3,7 +3,7 @@ use crate::print::{print, println};
 use crate::process::Process;
 use crate::x86::context::{Context, InterruptFrame};
 use crate::x86::cpu::cpu_num;
-use crate::x86::{cpu, lapic, print_backtrace_from, SERIAL, sleep_forever_no_irq};
+use crate::x86::{cpu, lapic, print_backtrace_from, sleep_forever_no_irq, SERIAL};
 use crate::{arch, executor, process, syscalls};
 use core::arch::asm;
 use core::cell::UnsafeCell;

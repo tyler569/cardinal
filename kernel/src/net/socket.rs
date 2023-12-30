@@ -1,6 +1,7 @@
-use crate::{arch, process};
 use crate::net::Packet;
 use crate::per_cpu::PerCpu;
+use crate::print::println;
+use crate::{arch, process};
 use alloc::collections::{BTreeMap, VecDeque};
 use core::cmp::{max, min};
 use core::future::Future;
@@ -8,7 +9,6 @@ use core::pin::Pin;
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use core::task::{Context, Poll, Waker};
 use spin::Mutex;
-use crate::print::println;
 
 pub struct Socket {
     id: u64,
@@ -64,9 +64,7 @@ impl Future for SocketRead {
             Some(packet) => {
                 let len = min(packet.data.len(), self.buffer.len());
                 let source = &packet.data[..len];
-                let Some(tree) = process::with(self.process_id, |p| {
-                    p.vm_root
-                }) else {
+                let Some(tree) = process::with(self.process_id, |p| p.vm_root) else {
                     // the process that was trying to read from this socket no longer exists
                     return Poll::Ready(0);
                 };

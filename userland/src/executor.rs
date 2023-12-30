@@ -79,9 +79,7 @@ unsafe fn exec_drop(data: *const ()) {
 }
 
 fn new_waker(id: u64) -> Waker {
-    let data = Arc::new(WakerData {
-        id,
-    });
+    let data = Arc::new(WakerData { id });
     let data = Arc::into_raw(data);
     let raw_waker = RawWaker::new(data as *const (), &WAKER_VTABLE);
     unsafe { Waker::from_raw(raw_waker) }

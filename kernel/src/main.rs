@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
-
 #![allow(unused)]
-
 #![feature(allocator_api)]
 #![feature(int_roundings)]
 #![feature(naked_functions)]

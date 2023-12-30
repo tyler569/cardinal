@@ -1,5 +1,5 @@
 use crate::arch::InterruptFrame;
-use crate::net::{Packet, Socket, socket};
+use crate::net::{socket, Packet, Socket};
 use crate::per_cpu::PerCpu;
 use crate::print::{print, println};
 use crate::process::Process;

@@ -1,8 +1,8 @@
+use crate::syscall;
+use cardinal3_interface::{Error, TaskId};
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
-use cardinal3_interface::{Error, TaskId};
-use crate::syscall;
 
 pub trait Read {
     fn read<'obj, 'buf>(&'obj mut self, buf: &'buf mut [u8]) -> ReadFuture<'buf>;
@@ -35,7 +35,7 @@ impl Future for ReadFuture<'_> {
                 Poll::Pending
             } else {
                 Poll::Ready(result as usize)
-            }
+            };
         }
     }
 }

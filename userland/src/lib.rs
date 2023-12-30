@@ -6,9 +6,9 @@ extern crate alloc;
 
 pub use cardinal3_allocator as allocator;
 
-pub mod syscall;
-pub mod executor;
 mod async_rw;
+pub mod executor;
+pub mod syscall;
 
 #[global_allocator]
 static ALLOCATOR: allocator::linky::LockedAllocator = allocator::linky::new();

@@ -108,7 +108,8 @@ impl Process {
             PerCpu::set_running(Some(id));
             arch::load_tree(p.vm_root);
             p.context.clone()
-        }).expect("Tried to load a process that doesn't exist");
+        })
+        .expect("Tried to load a process that doesn't exist");
 
         unsafe { arch::long_jump_context(&context) }
     }

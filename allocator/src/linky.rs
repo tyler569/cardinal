@@ -149,7 +149,12 @@ impl Allocator {
                     region.slice().fill(b'A');
                 }
 
-                assert!(region.size >= layout.size(), "region {} < layout {}", region.size, layout.size());
+                assert!(
+                    region.size >= layout.size(),
+                    "region {} < layout {}",
+                    region.size,
+                    layout.size()
+                );
 
                 // return the memory
                 return Ok(unsafe {
@@ -169,7 +174,12 @@ impl Allocator {
         let region = unsafe { &mut *region };
         assert_eq!(region.state, State::Allocated, "double free!");
         assert_eq!(region.magic, Link::MAGIC);
-        assert!(region.size >= layout.size(), "region {} < layout {}", region.size, layout.size());
+        assert!(
+            region.size >= layout.size(),
+            "region {} < layout {}",
+            region.size,
+            layout.size()
+        );
 
         region.state = State::Free;
         if DEBUG_FILL {
