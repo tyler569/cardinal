@@ -71,7 +71,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub(crate) const fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             initialized: false,
             gdt: [0; 7],
@@ -81,7 +81,7 @@ impl Cpu {
         }
     }
 
-    pub(crate) fn setup(&mut self, cpu_num: usize) {
+    pub fn setup(&mut self, cpu_num: usize) {
         if self.initialized {
             panic!("CPU already initialized");
         }
@@ -122,8 +122,8 @@ impl Stack {
     }
 }
 
-pub(crate) unsafe fn use_() {
-    let cpu = &mut PerCpu::get_mut().arch;
+pub unsafe fn use_() {
+    let cpu = PerCpu::arch();
     cpu.use_();
     asm!(
         "mov ds, ax",
@@ -136,5 +136,5 @@ pub(crate) unsafe fn use_() {
 }
 
 pub fn kernel_stack() -> u64 {
-    PerCpu::get_mut().arch.tss.kernel_stack()
+    PerCpu::arch().tss.kernel_stack()
 }

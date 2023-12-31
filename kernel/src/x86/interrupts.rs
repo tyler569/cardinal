@@ -146,8 +146,8 @@ fn handle_irq(frame: &mut InterruptFrame) {
 
 fn handle_timer(frame: &mut InterruptFrame) {
     let cpu = cpu_num() as usize;
-    PerCpu::get_mut().timer.tick();
-    PerCpu::get_mut().executor.do_work();
+    PerCpu::timer_mut().tick();
+    PerCpu::executor_mut().do_work();
 }
 
 fn handle_serial(frame: &mut InterruptFrame) {

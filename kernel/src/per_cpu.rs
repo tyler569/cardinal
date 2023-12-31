@@ -10,10 +10,10 @@ use spin::{Lazy, MutexGuard};
 
 pub struct PerCpu {
     this: *const UnsafeCell<Self>,
-    pub arch: arch::Cpu,
-    pub timer: Timer,
-    pub executor: Executor,
-    pub running: Option<u64>,
+    arch: arch::Cpu,
+    timer: Timer,
+    executor: Executor,
+    running: Option<u64>,
 }
 
 impl PerCpu {
@@ -43,12 +43,8 @@ impl PerCpu {
         unsafe { &mut *PER_CPU[arch::cpu_num() as usize].get() }
     }
 
-    pub fn for_cpu(cpu: usize) -> &'static Self {
-        unsafe { &*PER_CPU[cpu].get() }
-    }
-
-    pub fn for_cpu_mut(cpu: usize) -> &'static mut Self {
-        unsafe { &mut *PER_CPU[cpu].get() }
+    pub fn executor_for_cpu(cpu: usize) -> &'static Executor {
+        &unsafe { &*PER_CPU[cpu].get() }.executor
     }
 
     pub fn running() -> Option<u64> {
@@ -61,6 +57,22 @@ impl PerCpu {
 
     pub fn ticks() -> u64 {
         Self::get().timer.ticks()
+    }
+
+    pub fn executor() -> &'static Executor {
+        &Self::get().executor
+    }
+
+    pub fn executor_mut() -> &'static mut Executor {
+        &mut Self::get_mut().executor
+    }
+
+    pub fn timer_mut() -> &'static mut Timer {
+        &mut Self::get_mut().timer
+    }
+
+    pub fn arch() -> &'static arch::Cpu {
+        &Self::get().arch
     }
 }
 

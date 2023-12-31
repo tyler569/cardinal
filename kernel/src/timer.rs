@@ -72,7 +72,7 @@ impl Timer {
 
 #[deprecated = "use PerCpu::ticks() instead"]
 pub fn timestamp() -> u64 {
-    PerCpu::get().timer.ticks.load(Ordering::Relaxed)
+    PerCpu::ticks()
 }
 
 pub fn ticks_for(duration: core::time::Duration) -> u64 {
@@ -81,10 +81,10 @@ pub fn ticks_for(duration: core::time::Duration) -> u64 {
 
 pub fn insert<F: FnOnce() + 'static>(duration: core::time::Duration, callback: F) {
     let callback = Box::new(callback);
-    PerCpu::get_mut().timer.insert(duration, callback);
+    PerCpu::timer_mut().insert(duration, callback);
 }
 
 pub fn insert_at<F: FnOnce() + 'static>(time: u64, callback: F) {
     let callback = Box::new(callback);
-    PerCpu::get_mut().timer.raw_insert(time, callback);
+    PerCpu::timer_mut().raw_insert(time, callback);
 }

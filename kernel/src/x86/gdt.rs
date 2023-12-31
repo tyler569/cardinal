@@ -138,7 +138,7 @@ impl Tss {
         core::mem::size_of::<Self>() - 1
     }
 
-    pub fn kernel_stack(&mut self) -> u64 {
+    pub fn kernel_stack(&self) -> u64 {
         self.rsp0
     }
 
