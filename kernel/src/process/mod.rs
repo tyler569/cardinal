@@ -1,8 +1,8 @@
 use crate::arch::{Context, InterruptFrame, PageTable};
 use crate::per_cpu::PerCpu;
-use crate::print::println;
 use crate::vmm::PageFlags;
 use crate::{arch, elf_data, pmm};
+use crate::println;
 use alloc::collections::{BTreeMap, VecDeque};
 use core::sync::atomic::{AtomicU64, Ordering};
 use elf::endian::LittleEndian;
@@ -149,6 +149,10 @@ impl Process {
 
     pub fn set_context(&mut self, frame: &InterruptFrame) {
         self.context = Context::new(frame);
+    }
+
+    pub fn set_on_cpu(&mut self, on_cpu: Option<u32>) {
+        self.on_cpu = on_cpu;
     }
 }
 

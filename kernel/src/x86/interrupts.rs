@@ -38,6 +38,7 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
         let pid = old_pid.expect("Interrupt from usermode with no process on CPU");
         let should_run = process::with(pid, |p| {
             p.set_context(frame);
+            p.set_on_cpu(None);
             p.should_run()
         })
         .expect("Interrupt from usermode with process that no longer exists");
@@ -60,6 +61,7 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
         }
 
         arch::load_tree(old_vm_root.expect("Returning to process with no vm_root"));
+        process::with(pid, |p| p.set_on_cpu(Some(cpu_num())));
     } else {
         process::maybe_run_usermode_program(false);
     }
