@@ -55,23 +55,22 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
         match should_run {
             ProcessDisposition::MayContinue => {}
             ProcessDisposition::TimesUp => {
-                process::schedule_pid(pid);
-                process::maybe_run_usermode_program();
+                process::maybe_run_usermode_program(true);
             }
             ProcessDisposition::NotNow => {
-                process::maybe_run_usermode_program();
+                process::maybe_run_usermode_program(false);
                 arch::sleep_forever();
             }
             ProcessDisposition::NeverAgain => {
                 executor::spawn(async move { process::remove(pid); });
-                process::maybe_run_usermode_program();
+                process::maybe_run_usermode_program(false);
                 arch::sleep_forever();
             }
         }
 
         arch::load_tree(old_vm_root.expect("Returning to process with no vm_root"));
     } else {
-        process::maybe_run_usermode_program();
+        process::maybe_run_usermode_program(false);
     }
     assert_ne!(frame.ip, 0, "Returning from interrupt to IP 0");
 }

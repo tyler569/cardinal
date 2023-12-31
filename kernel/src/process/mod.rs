@@ -191,11 +191,15 @@ pub fn schedule_pid(pid: u64) {
     handle.push_back(pid);
 }
 
-pub fn maybe_run_usermode_program() {
-    let Some(pid) = RUNNABLE.lock().pop_front() else {
-        return;
+pub fn maybe_run_usermode_program(swap_in_current: bool) {
+    let pid = {
+        let mut binding = RUNNABLE.lock();
+        let Some(pid) = binding.pop_front() else { return; };
+        if swap_in_current {
+            binding.push_back(PerCpu::running().unwrap())
+        }
+        pid
     };
-    // println!("[cpu:{} wants to run pid:{}]", arch::cpu_num(), pid);
     Process::run(pid)
 }
 
