@@ -1,23 +1,12 @@
 use crate::per_cpu::PerCpu;
-use crate::print::{print, println};
-use crate::process::{Process, ProcessDisposition};
-use crate::x86::context::{Context, InterruptFrame};
+use crate::println;
+use crate::process::ProcessDisposition;
+use crate::x86::context::InterruptFrame;
 use crate::x86::cpu::cpu_num;
-use crate::x86::{cpu, lapic, print_backtrace_from, sleep_forever_no_irq, SERIAL};
+use crate::x86::{cpu, lapic, sleep_forever_no_irq, SERIAL};
 use crate::{arch, executor, process, syscalls};
 use core::arch::asm;
-use core::cell::UnsafeCell;
-use core::ops::Deref;
 use core::sync::atomic::{AtomicU64, Ordering};
-use spin::Lazy;
-
-pub unsafe fn enable_interrupts() {
-    asm!("cli");
-}
-
-pub unsafe fn disable_interrupts() {
-    asm!("sti");
-}
 
 static INTERRUPT_COUNT: AtomicU64 = AtomicU64::new(0);
 
@@ -29,7 +18,7 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     asm!("mov {}, rbp", out(reg) bp, options(nostack));
     assert_eq!(bp & 0xf, 0, "stack not aligned to 16 bytes");
 
-    let count = INTERRUPT_COUNT.fetch_add(1, Ordering::Relaxed);
+    let _count = INTERRUPT_COUNT.fetch_add(1, Ordering::Relaxed);
     let from_usermode = frame.cs & 0x03 == 0x03;
 
     match (*frame).interrupt_number {
@@ -42,7 +31,6 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
         _ => unexpected_interrupt(frame),
     }
 
-    let mut wants_continue = true;
     let old_pid = PerCpu::running();
     let old_vm_root = old_pid.and_then(|pid| process::with(pid, |proc| proc.vm_root()));
 
@@ -89,7 +77,7 @@ fn handle_page_fault(frame: &mut InterruptFrame) {
     panic!();
 }
 
-fn report_page_fault(error_code: u64, fault_addr: u64) {
+fn report_page_fault(error_code: u64, _fault_addr: u64) {
     if error_code & !0x1F != 0 {
         println!(
             "page fault caused by unknown condition (code: {:#x})",
@@ -144,13 +132,12 @@ fn handle_irq(frame: &mut InterruptFrame) {
     lapic::eoi();
 }
 
-fn handle_timer(frame: &mut InterruptFrame) {
-    let cpu = cpu_num() as usize;
+fn handle_timer(_frame: &mut InterruptFrame) {
     PerCpu::timer_mut().tick();
     PerCpu::executor_mut().do_work();
 }
 
-fn handle_serial(frame: &mut InterruptFrame) {
+fn handle_serial(_frame: &mut InterruptFrame) {
     unsafe { SERIAL.handle_interrupt() };
 }
 
@@ -158,13 +145,13 @@ fn handle_syscall(frame: &mut InterruptFrame) {
     syscalls::handle_syscall(frame);
 }
 
-fn handle_ipi(frame: &mut InterruptFrame) {
+fn handle_ipi(_frame: &mut InterruptFrame) {
     println!("CPU {} IPI", cpu_num());
 
     lapic::eoi();
 }
 
-fn handle_ipi_panic(frame: &mut InterruptFrame) {
+fn handle_ipi_panic(_frame: &mut InterruptFrame) {
     println!("CPU {} stopping due to panic on another CPU", cpu_num());
     sleep_forever_no_irq();
 }

@@ -65,7 +65,7 @@ impl Ipv4Header {
         header
     }
 
-    fn compute_checksum(&mut self, data: &[u8]) {
+    fn compute_checksum(&mut self, _data: &[u8]) {
         todo!()
     }
 }

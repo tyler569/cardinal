@@ -2,8 +2,6 @@ use crate::limine;
 use crate::pci::PciAddress;
 use crate::print::println;
 use core::arch::asm;
-use core::marker::Sync;
-use core::ops::DerefMut;
 use core::sync::atomic::{AtomicBool, Ordering};
 use spin::Lazy;
 
@@ -22,14 +20,12 @@ mod pio;
 mod serial;
 
 pub use context::{Context, InterruptFrame};
-pub use cpu::{cpu_num, kernel_stack, Cpu};
-pub use long_jump::{long_jump, long_jump_context, long_jump_cs, long_jump_usermode};
+pub use cpu::{cpu_num, Cpu};
+pub use long_jump::{long_jump_context, long_jump_cs};
 pub use page::{
-    free_tree, load_tree, map, map_in_table, new_tree, physical_address, PageTable, Pte,
+    free_tree, load_tree, map_in_table, new_tree, physical_address, PageTable,
 };
 pub use serial::SERIAL;
-
-pub use page::print_page_table;
 
 static DIRECT_MAP_OFFSET: Lazy<usize> =
     Lazy::new(|| unsafe { (**limine::HHDM.response.get()).offset } as usize);
@@ -80,7 +76,7 @@ pub unsafe fn early_cpu_init() {
 }
 
 pub fn direct_map_offset(phy: u64) -> usize {
-    (phy as usize + *DIRECT_MAP_OFFSET)
+    phy as usize + *DIRECT_MAP_OFFSET
 }
 
 pub fn direct_map<T>(ptr: *const T) -> *const T {
@@ -91,18 +87,6 @@ pub fn direct_map_mut<T>(ptr: *mut T) -> *mut T {
     direct_map(ptr) as *mut T
 }
 
-pub fn enable_interrupts() {
-    unsafe {
-        asm!("sti");
-    }
-}
-
-pub fn disable_interrupts() {
-    unsafe {
-        asm!("cli");
-    }
-}
-
 pub fn interrupts_are_disabled() -> bool {
     unsafe {
         let flags: u64;
@@ -111,6 +95,7 @@ pub fn interrupts_are_disabled() -> bool {
     }
 }
 
+#[allow(unused)]
 pub fn send_ipi(cpu_id: u8, vector: u8) {
     lapic::send_ipi(cpu_id, vector);
 }
@@ -131,10 +116,7 @@ pub fn sleep_forever_no_irq() -> ! {
     }
 }
 
-pub fn sleep_until_interrupt() {
-    unsafe { asm!("sti", "hlt") };
-}
-
+#[allow(unused)]
 pub fn pci_read(addr: PciAddress, offset: u8) -> u32 {
     let addr = addr.to_u32() | (offset as u32 & 0xfc);
     unsafe {
@@ -143,6 +125,7 @@ pub fn pci_read(addr: PciAddress, offset: u8) -> u32 {
     }
 }
 
+#[allow(unused)]
 pub fn pci_write(addr: PciAddress, offset: u8, value: u32) {
     let addr = addr.to_u32() | (offset as u32 & 0xfc);
     unsafe {
@@ -151,6 +134,7 @@ pub fn pci_write(addr: PciAddress, offset: u8, value: u32) {
     }
 }
 
+#[allow(unused)]
 unsafe fn acpi_debug() {
     let acpi_tables = acpi::init();
     let platform_info = ::acpi::PlatformInfo::new(&acpi_tables).unwrap();

@@ -1,13 +1,11 @@
 use crate::arch;
 use crate::per_cpu::PerCpu;
-use crate::print::println;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, VecDeque};
 use alloc::sync::Arc;
-use alloc::vec::Vec;
 use core::future::Future;
 use core::pin::Pin;
-use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use core::sync::atomic::{AtomicU64, Ordering};
 use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 use spin::Mutex;
 
@@ -18,7 +16,6 @@ struct Task {
 }
 
 pub struct Executor {
-    work_to_do: AtomicBool,
     tasks_to_poll: Mutex<VecDeque<u64>>,
     next_id: AtomicU64,
     tasks: BTreeMap<u64, Task>,
@@ -27,7 +24,6 @@ pub struct Executor {
 impl Executor {
     pub fn new() -> Self {
         Self {
-            work_to_do: AtomicBool::new(false),
             tasks_to_poll: Mutex::new(VecDeque::new()),
             next_id: AtomicU64::new(1),
             tasks: BTreeMap::new(),

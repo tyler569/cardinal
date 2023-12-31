@@ -1,5 +1,6 @@
+#![allow(unused)]
+
 use crate::arch;
-use crate::pci::rtl8139::Rtl8139;
 use crate::print::println;
 use core::fmt::{Debug, Display};
 

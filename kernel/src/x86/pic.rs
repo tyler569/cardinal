@@ -1,4 +1,3 @@
-use crate::limine::mmap::LimineMmapEntryType::AcpiNvs;
 use crate::x86::pio;
 
 const PRIMARY_COMMAND: u16 = 0x20;

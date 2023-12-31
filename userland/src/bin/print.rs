@@ -4,7 +4,7 @@
 use cardinal3_userland::syscall;
 
 #[no_mangle]
-fn _main(arg: usize) {
+fn cardinal_main(_arg: usize) {
     syscall::println("Hello, world!");
     syscall::exit(0);
 
@@ -56,6 +56,4 @@ fn _main(arg: usize) {
         }
     }
      */
-
-    syscall::exit(0);
 }

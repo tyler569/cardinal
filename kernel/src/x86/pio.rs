@@ -1,3 +1,7 @@
+// Much of this module models real-world hardware bits. Some of those bits aren't currently
+// used by this system.
+#![allow(dead_code)]
+
 use core::arch::asm;
 
 pub unsafe fn write_u8(port: u16, value: u8) {

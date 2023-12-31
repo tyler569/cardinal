@@ -1,5 +1,4 @@
-use crate::print::println;
-use crate::{limine, x86};
+use crate::limine;
 use acpi::{AcpiTables, PhysicalMapping};
 use core::ptr::NonNull;
 
@@ -17,7 +16,7 @@ impl acpi::AcpiHandler for AcpiHandler {
         PhysicalMapping::new(physical_address, virtual_pointer, size, size, AcpiHandler)
     }
 
-    fn unmap_physical_region<T>(region: &PhysicalMapping<Self, T>) {}
+    fn unmap_physical_region<T>(_region: &PhysicalMapping<Self, T>) {}
 }
 
 pub unsafe fn init() -> AcpiTables<AcpiHandler> {

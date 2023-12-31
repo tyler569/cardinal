@@ -1,6 +1,5 @@
 use crate::arch::cpu_num;
 use crate::per_cpu::PerCpu;
-use crate::print::println;
 use crate::x86;
 use core::arch::asm;
 use core::fmt::Debug;
@@ -35,12 +34,6 @@ pub struct InterruptFrame {
 }
 
 impl InterruptFrame {
-    pub fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
-    }
-
     pub fn new_user(ip: usize) -> Self {
         assert_ne!(ip, 0, "trying to create context to 0!");
         Self {
@@ -54,20 +47,12 @@ impl InterruptFrame {
         }
     }
 
-    pub fn interrupt_number(&self) -> u64 {
-        self.interrupt_number
-    }
-
     pub fn syscall_info(&self) -> &cardinal3_interface::Syscall {
         unsafe { &*(self.rax as *const cardinal3_interface::Syscall) }
     }
 
     pub fn set_syscall_return(&mut self, value: usize) {
         self.rax = value as u64;
-    }
-
-    pub fn ip(&self) -> usize {
-        self.ip as usize
     }
 }
 
@@ -98,7 +83,7 @@ impl core::fmt::Display for InterruptFrame {
             "ip {:016x} cs {:016x} fl {:016x}",
             self.ip, self.cs, self.flags,
         )?;
-        write!(f, "cpu {}  pid {:?}", cpu_num(), PerCpu::running(),);
+        write!(f, "cpu {}  pid {:?}", cpu_num(), PerCpu::running(),)?;
         Ok(())
     }
 }
@@ -116,7 +101,7 @@ impl FpuContext {
 #[derive(Clone)]
 #[repr(C)]
 pub struct Context {
-    pub(crate) frame: InterruptFrame,
+    pub(super) frame: InterruptFrame,
     pub(super) fpu_context: FpuContext,
     pub(super) has_fpu_context: bool,
 }
@@ -140,10 +125,6 @@ impl Context {
             asm!("fxsave [{}]", in(reg) &mut res.fpu_context);
         }
         res
-    }
-
-    pub fn ip(&self) -> usize {
-        self.frame.ip()
     }
 
     pub fn set_arg1(&mut self, arg1: u64) {

@@ -1,5 +1,3 @@
-use crate::print::println;
-use crate::x86::context::InterruptFrame;
 use core::arch::asm;
 
 static mut IDT: Idt = Idt::zero();
@@ -47,6 +45,7 @@ struct IdtEntry {
     zero: u32,
 }
 
+#[allow(dead_code)]
 pub enum GateType {
     InterruptGate = 0b1110,
     TrapGate = 0b1111,

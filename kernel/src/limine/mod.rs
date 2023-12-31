@@ -1,5 +1,6 @@
-use core::cell::UnsafeCell;
-use core::ffi::c_char;
+// Much of this comes in over FFI and/or exposes features of the limine API that I may
+// or may not be using yet.
+#![allow(dead_code)]
 
 pub mod boot_info;
 pub mod hhdm;

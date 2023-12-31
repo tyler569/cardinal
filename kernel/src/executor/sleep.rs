@@ -1,5 +1,4 @@
 use crate::per_cpu::PerCpu;
-use crate::print::println;
 use crate::timer;
 use core::future::Future;
 use core::pin::Pin;

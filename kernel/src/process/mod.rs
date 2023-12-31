@@ -2,24 +2,17 @@ use crate::arch::{Context, InterruptFrame, PageTable};
 use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::vmm::PageFlags;
-use crate::{arch, elf_data, pmm, vmm};
+use crate::{arch, elf_data, pmm};
 use alloc::collections::{BTreeMap, VecDeque};
-use alloc::vec::Vec;
-use bitflags::Flags;
-use core::arch::asm;
-use core::ptr::NonNull;
-use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicU64, Ordering};
 use elf::endian::LittleEndian;
 use spin::Mutex;
-
-mod spawn;
 
 #[derive(Debug)]
 pub struct Process {
     context: Context,
     vm_root: *mut PageTable,
     state: ProcessState,
-    pending_signals: u64,
     exit_code: Option<u64>,
     pid: u64,
     sched_in: u64,
@@ -45,8 +38,6 @@ pub enum ProcessDisposition {
     TimesUp,
     NeverAgain,
 }
-
-static DO_IT_ONCE: AtomicBool = AtomicBool::new(true);
 
 impl Process {
     pub unsafe fn new(elf_data: &[u8], arg: usize) -> u64 {
@@ -99,7 +90,6 @@ impl Process {
             context,
             vm_root,
             state: ProcessState::Running,
-            pending_signals: 0,
             exit_code: None,
             pid,
             sched_in: 0,
@@ -129,10 +119,6 @@ impl Process {
         self.on_cpu.is_some() && self.sched_in + 10 > PerCpu::ticks()
     }
 
-    pub fn wants_to_run(&self) -> bool {
-        self.state == ProcessState::Running
-    }
-
     pub fn should_run(&self) -> ProcessDisposition {
         match self.state {
             ProcessState::Exited => ProcessDisposition::NeverAgain,
@@ -152,7 +138,8 @@ impl Process {
         self.exit_code = Some(code);
     }
 
-    pub fn wait(&mut self, task_id: u64) {
+    #[allow(dead_code)]
+    pub fn wait(&mut self, _task_id: u64) {
         self.state = ProcessState::Waiting;
     }
 
@@ -178,10 +165,6 @@ impl Drop for Process {
 static NEXT_PID: AtomicU64 = AtomicU64::new(1);
 pub static ALL: Mutex<BTreeMap<u64, Process>> = Mutex::new(BTreeMap::new());
 pub static RUNNABLE: Mutex<VecDeque<u64>> = Mutex::new(VecDeque::new());
-
-pub fn schedule(proc: &Process) {
-    schedule_pid(proc.pid);
-}
 
 pub fn schedule_pid(pid: u64) {
     let mut handle = RUNNABLE.lock();
@@ -211,10 +194,7 @@ pub fn exit(code: u64) -> u64 {
     let Some(pid) = PerCpu::running() else {
         panic!("No running process");
     };
-    with(pid, |p| {
-        p.exit_code = Some(code);
-        p.state = ProcessState::Exited;
-    });
+    with(pid, |p| p.exit(code));
     code
 }
 

@@ -1,7 +1,7 @@
 use crate::arch;
 use crate::net::MacAddress;
 use crate::pci::PciAddress;
-use crate::print::println;
+use crate::println;
 
 #[derive(Debug)]
 pub struct Rtl8139 {
@@ -101,7 +101,7 @@ impl Rtl8139 {
             println!("RTL8139 reset");
 
             let ring_phy = crate::pmm::alloc_contiguous(16).unwrap();
-            let ring_mapped = arch::direct_map_offset(ring_phy);
+            let _ring_mapped = arch::direct_map_offset(ring_phy);
 
             self.io_write_u32(0x30, ring_phy as u32); // ring buffer
             self.io_write_u16(0x3c, 0x0005); // configure interrupts and txok, rxok

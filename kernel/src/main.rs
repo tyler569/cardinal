@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![allow(unused)]
 #![feature(allocator_api)]
 #![feature(int_roundings)]
 #![feature(naked_functions)]
@@ -11,10 +10,7 @@ extern crate alloc;
 
 use cardinal3_allocator as allocator;
 use core::arch::asm;
-use core::pin::pin;
-use core::sync::atomic::AtomicBool;
 use core::time::Duration;
-use elf::endian::LittleEndian;
 
 mod executor;
 mod limine;
@@ -31,10 +27,10 @@ mod vmm;
 mod x86;
 
 use crate::arch::SERIAL;
-pub(crate) use crate::per_cpu::PerCpu;
-pub(crate) use crate::process::Process;
-pub(crate) use print::{print, println};
-pub(crate) use x86 as arch;
+use crate::per_cpu::PerCpu;
+use crate::process::Process;
+use print::{print, println};
+use x86 as arch;
 
 pub const NUM_CPUS: usize = 16;
 
@@ -127,6 +123,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     arch::sleep_forever_no_irq()
 }
 
+#[allow(unused)]
 unsafe fn limine_info() {
     let boot_info = &**limine::BOOT_INFO.response.get();
     println!("boot_info: {:?}", boot_info);

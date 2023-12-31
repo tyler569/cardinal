@@ -1,8 +1,8 @@
-use crate::limine::mmap::{LimineMmapEntry, LimineMmapEntryType};
+use crate::limine::mmap::{LimineMmapEntryType};
 use crate::print::println;
-use crate::{arch, limine};
+use crate::limine;
 use alloc::vec::Vec;
-use spin::{Lazy, Mutex};
+use spin::Mutex;
 
 #[derive(Debug, Copy, Clone)]
 enum PageInfo {
@@ -11,6 +11,9 @@ enum PageInfo {
     Reserved,
     InUse { refcount: u16 },
     Kernel,
+
+    // We don't support refcounting yet, so there's no code for leaking pages.
+    #[allow(dead_code)]
     Leaked,
 }
 
@@ -68,7 +71,6 @@ pub fn init() {
             LimineMmapEntryType::AcpiReclaimable => fill_with(PageInfo::Reserved),
             LimineMmapEntryType::AcpiNvs => fill_with(PageInfo::Reserved),
             LimineMmapEntryType::BadMemory => fill_with(PageInfo::Reserved),
-            _ => {}
         }
     }
 }
@@ -79,22 +81,6 @@ pub fn alloc() -> Option<u64> {
         if let PageInfo::Free = page {
             *page = PageInfo::InUse { refcount: 1 };
             return Some((i * 4096) as u64);
-        }
-    }
-    None
-}
-
-pub fn alloc_zeroed() -> Option<u64> {
-    let mut page_info = PAGE_INFO.lock();
-    for (i, page) in page_info.iter_mut().enumerate() {
-        if let PageInfo::Free = page {
-            *page = PageInfo::InUse { refcount: 1 };
-            let ptr = i * 4096;
-            let mapped_ptr = arch::direct_map_mut(ptr as *mut u8);
-            unsafe {
-                core::ptr::write_bytes(mapped_ptr, 0, 4096);
-            }
-            return Some(ptr as u64);
         }
     }
     None
@@ -144,7 +130,7 @@ pub fn free(page: u64) {
 }
 
 pub fn summary() {
-    let mut page_info = PAGE_INFO.lock();
+    let page_info = PAGE_INFO.lock();
     let mut free = 0;
     let mut reserved = 0;
     let mut kernel = 0;

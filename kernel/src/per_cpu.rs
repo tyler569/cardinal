@@ -1,12 +1,9 @@
 use crate::executor::Executor;
-use crate::process::Process;
 use crate::timer::Timer;
-use crate::{arch, process, NUM_CPUS};
+use crate::{arch, NUM_CPUS};
 use core::cell::UnsafeCell;
-use core::ops::{Deref, DerefMut, Index, IndexMut};
-use core::ptr::NonNull;
-use core::sync::atomic::AtomicU64;
-use spin::{Lazy, MutexGuard};
+use core::ops::{Index, IndexMut};
+use spin::Lazy;
 
 pub struct PerCpu {
     this: *const UnsafeCell<Self>,
@@ -57,10 +54,6 @@ impl PerCpu {
 
     pub fn ticks() -> u64 {
         Self::get().timer.ticks()
-    }
-
-    pub fn executor() -> &'static Executor {
-        &Self::get().executor
     }
 
     pub fn executor_mut() -> &'static mut Executor {

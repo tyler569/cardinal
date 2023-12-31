@@ -1,7 +1,11 @@
+// Much of this module models real-world hardware bits. Some of those bits aren't currently
+// used by this system.
+#![allow(dead_code)]
+
 use acpi::platform::interrupt::InterruptSourceOverride;
 
-const IOAPIC_BASE: u32 = 0xFEC0_0000;
-const MAPPED_BASE: usize = 0xFFFF_8000_FEC0_0000;
+const IOAPIC_BASE: usize = 0xFEC0_0000;
+const MAPPED_BASE: usize = 0xFFFF_8000_0000_0000 + IOAPIC_BASE;
 const MAPPED_ADDR: *mut u32 = MAPPED_BASE as *mut u32;
 const MAPPED_DATA: *mut u32 = (MAPPED_BASE + 0x10) as *mut u32;
 
@@ -34,6 +38,7 @@ enum DeliveryStatus {
     SendPending = 1,
 }
 
+#[allow(dead_code)] // modelling real-world
 enum PinPolarity {
     High = 0,
     Low = 1,

@@ -1,5 +1,4 @@
 use crate::print::println;
-use crate::x86;
 use crate::x86::cpu;
 
 pub const DEFAULT_ADDRESS: usize = 0xfee0_0000;
@@ -32,6 +31,7 @@ pub fn eoi() {
     }
 }
 
+#[allow(unused)]
 pub fn send_ipi(apic_id: u8, vector: u8) {
     unsafe {
         write(0x310, (apic_id as u32) << 24);

@@ -15,8 +15,8 @@ pub enum IcmpType {
 }
 
 impl IcmpHeader {
-    pub fn new_echo_request(data: &[u8]) -> Self {
-        let mut header = Self {
+    pub fn new_echo_request(_data: &[u8]) -> Self {
+        let header = Self {
             icmp_type: IcmpType::EchoRequest,
             icmp_code: 0,
             checksum: 0,

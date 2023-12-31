@@ -1,12 +1,10 @@
-use crate::arch::InterruptFrame;
-use crate::net::{socket, Packet, Socket};
+use crate::net::{socket, Socket};
 use crate::per_cpu::PerCpu;
-use crate::print::{print, println};
-use crate::process::Process;
-use crate::{arch, elf_data, process};
+use crate::println;
+use crate::{arch, process};
 use cardinal3_interface::{Error, Syscall};
 
-pub fn handle_syscall(frame: &mut InterruptFrame) {
+pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
     let syscall = frame.syscall_info();
     let pid = PerCpu::running().unwrap_or(0);
 
@@ -18,7 +16,7 @@ pub fn handle_syscall(frame: &mut InterruptFrame) {
     );
 
     let result = match syscall {
-        &Syscall::Println(string) => Ok(0),
+        &Syscall::Println(_) => Ok(0),
         &Syscall::Exit(code) => Ok(process::exit(code)),
         &Syscall::Spawn(name, arg) => Ok(process::spawn(name, arg)),
         &Syscall::DgSocket => Ok(Socket::new()),

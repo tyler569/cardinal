@@ -4,10 +4,10 @@ use crate::print::println;
 use crate::{arch, process};
 use alloc::collections::{BTreeMap, VecDeque};
 use cardinal3_interface::Error;
-use core::cmp::{max, min};
+use core::cmp::min;
 use core::future::Future;
 use core::pin::Pin;
-use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicU64, Ordering};
 use core::task::{Context, Poll, Waker};
 use spin::Mutex;
 

@@ -1,5 +1,4 @@
 use core::cell::UnsafeCell;
-use core::ffi::{c_char, CStr};
 
 use super::{LIMINE_MAGIC1, LIMINE_MAGIC2};
 

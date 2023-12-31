@@ -28,14 +28,14 @@ fn panic(_panic_info: &core::panic::PanicInfo) -> ! {
 }
 
 extern "Rust" {
-    fn _main(arg: usize);
+    fn cardinal_main(arg: usize);
 }
 
 #[no_mangle]
 pub extern "C" fn _start(arg: usize) {
     static_heap_init();
     unsafe {
-        _main(arg);
+        cardinal_main(arg);
     }
     syscall::println("main returned!\n");
     syscall::exit(0);

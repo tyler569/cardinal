@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 mod packet;
 mod proto;
 pub mod socket;

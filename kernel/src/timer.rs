@@ -39,11 +39,6 @@ impl Timer {
         duration.as_millis() as u64
     }
 
-    pub fn insert(&mut self, duration: core::time::Duration, callback: Box<dyn FnOnce()>) {
-        let time = self.ticks.load(Ordering::SeqCst) + Self::duration_to_ticks(duration);
-        self.raw_insert(time, callback);
-    }
-
     pub fn tick(&mut self) {
         self.ticks.fetch_add(1, Ordering::SeqCst);
         let up_to = self.ticks.load(Ordering::SeqCst);
@@ -70,18 +65,8 @@ impl Timer {
     }
 }
 
-#[deprecated = "use PerCpu::ticks() instead"]
-pub fn timestamp() -> u64 {
-    PerCpu::ticks()
-}
-
 pub fn ticks_for(duration: core::time::Duration) -> u64 {
     Timer::duration_to_ticks(duration)
-}
-
-pub fn insert<F: FnOnce() + 'static>(duration: core::time::Duration, callback: F) {
-    let callback = Box::new(callback);
-    PerCpu::timer_mut().insert(duration, callback);
 }
 
 pub fn insert_at<F: FnOnce() + 'static>(time: u64, callback: F) {

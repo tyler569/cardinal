@@ -1,5 +1,4 @@
 use crate::per_cpu::PerCpu;
-use crate::print::println;
 use crate::x86::gdt;
 use crate::x86::gdt::Tss;
 use crate::NUM_CPUS;
@@ -25,6 +24,7 @@ pub fn cpuid(a: u32, c: u32) -> [u32; 4] {
 
 pub const IA32_LAPIC_BASE: u32 = 27;
 
+#[allow(dead_code)]
 pub unsafe fn wrmsr(msr: u32, value: u64) {
     asm!(
         "wrmsr",
@@ -34,6 +34,7 @@ pub unsafe fn wrmsr(msr: u32, value: u64) {
     );
 }
 
+#[allow(dead_code)]
 pub unsafe fn rdmsr(msr: u32) -> u64 {
     let value_low: u64;
     let value_high: u64;
@@ -88,7 +89,7 @@ impl Cpu {
 
         self.initialized = true;
 
-        unsafe { gdt::init_in_place(&mut self.gdt, &mut self.tss) };
+        gdt::init_in_place(&mut self.gdt, &mut self.tss);
 
         self.stack = unsafe { &STACKS[cpu_num].0 } as *const _;
         self.df_stack = unsafe { &STACKS[cpu_num].1 } as *const _;

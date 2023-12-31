@@ -62,9 +62,6 @@ impl GdtPtr {
     }
 }
 
-static mut GDT: [u64; 7] = [0; 7];
-static mut TSS: Tss = Tss::new();
-
 fn basic_gdt(tss: &Tss) -> [GdtEntry; 6] {
     let tss_addr = tss as *const Tss as u64;
     [
@@ -162,6 +159,7 @@ pub unsafe fn load(gdt: &[u64; 7]) {
     asm!("ltr ax", in("ax") 0x28);
 }
 
+#[allow(dead_code)]
 pub fn debug_print(gdt: &[u64]) {
     for (i, entry) in gdt.iter().enumerate() {
         println!("gdt[{}]: {:#018x?}", i, entry);

@@ -1,4 +1,3 @@
-use crate::print::println;
 use crate::x86::{cpu, Context};
 use core::arch::asm;
 
@@ -17,6 +16,7 @@ pub unsafe fn long_jump_cs(jump_to: usize) -> ! {
     )
 }
 
+#[allow(unused)]
 pub unsafe fn long_jump_usermode(jump_to: usize, stack: usize) -> ! {
     asm!(
         // "mov ax, 0",
@@ -54,6 +54,7 @@ pub unsafe fn long_jump_usermode(jump_to: usize, stack: usize) -> ! {
     )
 }
 
+#[allow(unused)]
 pub unsafe fn long_jump(jump_to: unsafe fn() -> !, stack: usize) -> ! {
     asm!(
         "mov rsp, {stack}",

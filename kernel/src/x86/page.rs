@@ -1,7 +1,6 @@
 use crate::print::{print, println};
 use crate::vmm::PageFlags;
 use crate::{pmm, x86};
-use bitflags::Flags;
 use core::arch::asm;
 use core::fmt::{Display, Formatter};
 use spin::Once;
@@ -10,6 +9,7 @@ use spin::Once;
 #[derive(Copy, Clone, Debug)]
 pub struct Pte(pub u64);
 
+#[allow(dead_code)] // modelling real-world
 impl Pte {
     pub const PRESENT: u64 = 0x01;
     pub const WRITEABLE: u64 = 0x02;
@@ -153,6 +153,7 @@ pub fn get_vm_root() -> *mut PageTable {
     x86::direct_map_mut((vm_root & 0xffff_ffff_ffff_f000) as *mut PageTable)
 }
 
+#[allow(dead_code)] // debug
 pub fn print_page_table(root: *const PageTable) {
     print_page_table_level(root, 4, 0);
 }
@@ -227,13 +228,6 @@ pub unsafe fn map_in_table(root: *mut PageTable, virt: usize, phys: u64, flags: 
 
     let p1 = &mut (*p2.next_table_mut()).entries[p1_offset];
     p1.set(phys, flags);
-}
-
-pub fn map(virt: usize, phys: u64, flags: PageFlags) {
-    unsafe {
-        map_in_table(get_vm_root(), virt, phys, flags);
-        asm!("invlpg [{}]", in(reg) virt);
-    }
 }
 
 pub fn physical_address(virtual_address: usize) -> Option<u64> {
@@ -325,11 +319,11 @@ unsafe fn free_tree_level(root: *mut PageTable, level: usize) {
 static KERNEL_ROOT: Once<usize> = Once::new();
 
 pub unsafe fn init() {
-    let mut root = get_vm_root();
-    (*root).entries[0].set(0, 0);
-    (*root).entries[1].set(0, 0);
-    (*root).entries[257].set(0, 0);
-    KERNEL_ROOT.call_once(|| root as usize);
+    let root = &mut *get_vm_root();
+    root.entries[0].set(0, 0);
+    root.entries[1].set(0, 0);
+    root.entries[257].set(0, 0);
+    KERNEL_ROOT.call_once(|| root as *const _ as usize);
 }
 /*
 bitflags! {

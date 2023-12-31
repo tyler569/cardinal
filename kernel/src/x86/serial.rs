@@ -1,4 +1,3 @@
-use crate::print::{print, println};
 use crate::x86::pio;
 use alloc::collections::VecDeque;
 use alloc::vec::Vec;
@@ -52,19 +51,13 @@ impl SerialPort {
         self.writer.lock()
     }
 
+    #[allow(unused)]
     pub fn try_write(&self) -> Option<MutexGuard<SerialPortWriter>> {
-        let x = self.writer.try_lock();
-
-        // if x.is_none() {
-        //     let mut spw = SerialPortWriter { port: self.port };
-        //     spw.write_str("XXX").unwrap();
-        // }
-
-        x
+        self.writer.try_lock()
     }
 
     pub fn read(&self) -> SerialPortReadFuture {
-        SerialPortReadFuture { port: self.port }
+        SerialPortReadFuture
     }
 }
 
@@ -83,22 +76,18 @@ impl SerialPortWriter {
 
 impl Write for SerialPortWriter {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        unsafe {
-            for b in s.bytes() {
-                if b == b'\n' {
-                    self.write_byte(b'\r');
-                }
-                self.write_byte(b);
+        for b in s.bytes() {
+            if b == b'\n' {
+                self.write_byte(b'\r');
             }
+            self.write_byte(b);
         }
         Ok(())
     }
 }
 
 #[must_use = "futures do nothing unless you `.await` or poll them"]
-pub struct SerialPortReadFuture {
-    port: u16,
-}
+pub struct SerialPortReadFuture;
 
 impl Future for SerialPortReadFuture {
     type Output = u8;
