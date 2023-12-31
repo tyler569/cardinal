@@ -51,7 +51,8 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
         let should_run = process::with(pid, |p| {
             p.set_context(frame);
             p.should_run()
-        }).expect("Interrupt from usermode with process that no longer exists");
+        })
+        .expect("Interrupt from usermode with process that no longer exists");
         match should_run {
             ProcessDisposition::MayContinue => {}
             ProcessDisposition::TimesUp => {
@@ -62,7 +63,9 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
                 arch::sleep_forever();
             }
             ProcessDisposition::NeverAgain => {
-                executor::spawn(async move { process::remove(pid); });
+                executor::spawn(async move {
+                    process::remove(pid);
+                });
                 process::maybe_run_usermode_program(false);
                 arch::sleep_forever();
             }

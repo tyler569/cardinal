@@ -137,10 +137,12 @@ impl Process {
         match self.state {
             ProcessState::Exited => ProcessDisposition::NeverAgain,
             ProcessState::Waiting => ProcessDisposition::NotNow,
-            ProcessState::Running => if self.time_expired() {
-                ProcessDisposition::TimesUp
-            } else {
-                ProcessDisposition::MayContinue
+            ProcessState::Running => {
+                if self.time_expired() {
+                    ProcessDisposition::TimesUp
+                } else {
+                    ProcessDisposition::MayContinue
+                }
             }
         }
     }
@@ -194,7 +196,9 @@ pub fn schedule_pid(pid: u64) {
 pub fn maybe_run_usermode_program(swap_in_current: bool) {
     let pid = {
         let mut binding = RUNNABLE.lock();
-        let Some(pid) = binding.pop_front() else { return; };
+        let Some(pid) = binding.pop_front() else {
+            return;
+        };
         if swap_in_current {
             binding.push_back(PerCpu::running().unwrap())
         }

@@ -1,10 +1,10 @@
+use crate::arch::cpu_num;
+use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::x86;
 use core::arch::asm;
 use core::fmt::Debug;
 use core::fmt::Formatter;
-use crate::arch::cpu_num;
-use crate::per_cpu::PerCpu;
 
 #[repr(C)]
 #[derive(Debug, Default, Clone)]
@@ -98,11 +98,7 @@ impl core::fmt::Display for InterruptFrame {
             "ip {:016x} cs {:016x} fl {:016x}",
             self.ip, self.cs, self.flags,
         )?;
-        write!(
-            f,
-            "cpu {}  pid {:?}",
-            cpu_num(), PerCpu::running(),
-        );
+        write!(f, "cpu {}  pid {:?}", cpu_num(), PerCpu::running(),);
         Ok(())
     }
 }
