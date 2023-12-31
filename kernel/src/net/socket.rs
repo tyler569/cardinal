@@ -65,7 +65,7 @@ impl Future for SocketRead {
             Some(packet) => {
                 let len = min(packet.data.len(), self.buffer.len());
                 let source = &packet.data[..len];
-                let Some(tree) = process::with(self.process_id, |p| p.vm_root) else {
+                let Some(tree) = process::with(self.process_id, |p| p.vm_root()) else {
                     // the process that was trying to read from this socket no longer exists
                     return Poll::Ready(0);
                 };
@@ -95,7 +95,6 @@ pub fn read(sn: u64, buf: *mut [u8]) -> Result<u64, Error> {
     let pid = PerCpu::running().unwrap();
     crate::executor::spawn(async move {
         task.await;
-        process::with(pid, |p| p.pending_signals |= 1);
         println!("[KERNEL: read completed]");
     });
     Ok(0)

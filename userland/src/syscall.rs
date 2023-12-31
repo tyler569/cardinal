@@ -17,7 +17,7 @@ pub fn println(string: &str) -> usize {
     syscall(&Syscall::Println(string))
 }
 
-pub fn exit(code: u32) -> ! {
+pub fn exit(code: u64) -> ! {
     syscall(&Syscall::Exit(code));
     unreachable!();
 }

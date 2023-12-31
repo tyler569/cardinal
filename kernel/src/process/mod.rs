@@ -1,4 +1,4 @@
-use crate::arch::{Context, PageTable};
+use crate::arch::{Context, InterruptFrame, PageTable};
 use crate::per_cpu::PerCpu;
 use crate::print::println;
 use crate::vmm::PageFlags;
@@ -16,13 +16,14 @@ mod spawn;
 
 #[derive(Debug)]
 pub struct Process {
-    pub context: arch::Context,
-    pub vm_root: *mut PageTable,
-    pub state: ProcessState,
-    pub pending_signals: u64,
-    pub exit_code: Option<u32>,
-    pub pid: u64,
-    pub sched_in: u64,
+    context: Context,
+    vm_root: *mut PageTable,
+    state: ProcessState,
+    pending_signals: u64,
+    exit_code: Option<u64>,
+    pid: u64,
+    sched_in: u64,
+    on_cpu: Option<u32>,
 }
 
 // Rust is mad because of the PageTable, but we'll never modify that through this object
@@ -35,6 +36,14 @@ pub enum ProcessState {
     Running,
     Waiting,
     Exited,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum ProcessDisposition {
+    MayContinue,
+    NotNow,
+    TimesUp,
+    NeverAgain,
 }
 
 static DO_IT_ONCE: AtomicBool = AtomicBool::new(true);
@@ -94,19 +103,21 @@ impl Process {
             exit_code: None,
             pid,
             sched_in: 0,
+            on_cpu: None,
         };
 
         ALL.lock().insert(pid, process);
-        println!("[cpu:{} created pid:{}]", arch::cpu_num(), pid);
+        // println!("[cpu:{} created pid:{}]", arch::cpu_num(), pid);
         pid
     }
 
     pub fn run(id: u64) -> ! {
         println!("[cpu:{} running pid:{}]", arch::cpu_num(), id);
         let context = with(id, |p| {
-            p.sched_in = PerCpu::ticks();
             PerCpu::set_running(Some(id));
             arch::load_tree(p.vm_root);
+            p.on_cpu = Some(arch::cpu_num());
+            p.sched_in = PerCpu::ticks();
             p.context.clone()
         })
         .expect("Tried to load a process that doesn't exist");
@@ -115,7 +126,40 @@ impl Process {
     }
 
     pub fn time_expired(&self) -> bool {
-        self.sched_in + 10 > PerCpu::ticks()
+        self.on_cpu.is_some() && self.sched_in + 10 > PerCpu::ticks()
+    }
+
+    pub fn wants_to_run(&self) -> bool {
+        self.state == ProcessState::Running
+    }
+
+    pub fn should_run(&self) -> ProcessDisposition {
+        match self.state {
+            ProcessState::Exited => ProcessDisposition::NeverAgain,
+            ProcessState::Waiting => ProcessDisposition::NotNow,
+            ProcessState::Running => if self.time_expired() {
+                ProcessDisposition::TimesUp
+            } else {
+                ProcessDisposition::MayContinue
+            }
+        }
+    }
+
+    pub fn exit(&mut self, code: u64) {
+        self.state = ProcessState::Exited;
+        self.exit_code = Some(code);
+    }
+
+    pub fn wait(&mut self, task_id: u64) {
+        self.state = ProcessState::Waiting;
+    }
+
+    pub fn vm_root(&self) -> *mut PageTable {
+        self.vm_root
+    }
+
+    pub fn set_context(&mut self, frame: &InterruptFrame) {
+        self.context = Context::new(frame);
     }
 }
 
@@ -143,6 +187,7 @@ pub fn schedule_pid(pid: u64) {
     if handle.iter().any(|&p| p == pid) {
         return;
     }
+    // println!("[cpu:{} scheduling pid:{}]", arch::cpu_num(), pid);
     handle.push_back(pid);
 }
 
@@ -150,15 +195,19 @@ pub fn maybe_run_usermode_program() {
     let Some(pid) = RUNNABLE.lock().pop_front() else {
         return;
     };
+    // println!("[cpu:{} wants to run pid:{}]", arch::cpu_num(), pid);
     Process::run(pid)
 }
 
-pub fn exit(code: u32) -> u64 {
+pub fn exit(code: u64) -> u64 {
     let Some(pid) = PerCpu::running() else {
         panic!("No running process");
     };
-    with(pid, |p| p.exit_code = Some(code));
-    code as u64
+    with(pid, |p| {
+        p.exit_code = Some(code);
+        p.state = ProcessState::Exited;
+    });
+    code
 }
 
 pub fn spawn(_name: &str, arg: usize) -> u64 {
@@ -171,4 +220,8 @@ pub fn spawn(_name: &str, arg: usize) -> u64 {
 
 pub fn with<T, F: FnOnce(&mut Process) -> T>(pid: u64, func: F) -> Option<T> {
     ALL.lock().get_mut(&pid).map(func)
+}
+
+pub fn remove(pid: u64) {
+    ALL.lock().remove(&pid);
 }

@@ -5,10 +5,8 @@ use cardinal3_userland::syscall;
 
 #[no_mangle]
 fn _main(arg: usize) {
-    /*
     syscall::println("Hello, world!");
     syscall::exit(0);
-     */
 
     /*
     if arg == 0 {
@@ -39,6 +37,7 @@ fn _main(arg: usize) {
     syscall::exit(0);
      */
 
+    /*
     if arg == 0 {
         syscall::println("Hello World");
         let socket = syscall::socket();
@@ -56,6 +55,7 @@ fn _main(arg: usize) {
             }
         }
     }
+     */
 
     syscall::exit(0);
 }

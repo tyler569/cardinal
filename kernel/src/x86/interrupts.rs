@@ -1,6 +1,6 @@
 use crate::per_cpu::PerCpu;
 use crate::print::{print, println};
-use crate::process::Process;
+use crate::process::{Process, ProcessDisposition};
 use crate::x86::context::{Context, InterruptFrame};
 use crate::x86::cpu::cpu_num;
 use crate::x86::{cpu, lapic, print_backtrace_from, sleep_forever_no_irq, SERIAL};
@@ -44,46 +44,36 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
 
     let mut wants_continue = true;
     let old_pid = PerCpu::running();
+    let old_vm_root = old_pid.and_then(|pid| process::with(pid, |proc| proc.vm_root()));
 
     if from_usermode {
-        let pid = old_pid.expect("No running usermode process");
-        let mut binding = process::ALL.lock();
-        if let Some(mut proc) = binding.get_mut(&pid) {
-            proc.context = Context::new(frame);
-            if proc.exit_code.is_some() {
-                wants_continue = false;
-                executor::spawn(async move {
-                    process::ALL.lock().remove(&pid);
-                })
-            } else {
-                if proc.time_expired() {
-                    process::schedule_pid(pid);
-                } else {
-                    arch::load_tree(proc.vm_root);
-                    assert_ne!(frame.ip, 0, "trying to return to 0!");
-                    return;
-                }
+        let pid = old_pid.expect("Interrupt from usermode with no process on CPU");
+        let should_run = process::with(pid, |p| {
+            p.set_context(frame);
+            p.should_run()
+        }).expect("Interrupt from usermode with process that no longer exists");
+        match should_run {
+            ProcessDisposition::MayContinue => {}
+            ProcessDisposition::TimesUp => {
+                process::schedule_pid(pid);
+                process::maybe_run_usermode_program();
+            }
+            ProcessDisposition::NotNow => {
+                process::maybe_run_usermode_program();
+                arch::sleep_forever();
+            }
+            ProcessDisposition::NeverAgain => {
+                executor::spawn(async move { process::remove(pid); });
+                process::maybe_run_usermode_program();
+                arch::sleep_forever();
             }
         }
-    }
 
-    process::maybe_run_usermode_program();
-
-    if wants_continue {
-        if from_usermode {
-            let pid = PerCpu::running().unwrap();
-            let Some(vm_root) = process::with(pid, |p| p.vm_root) else {
-                PerCpu::set_running(None);
-                arch::sleep_forever()
-            };
-            arch::load_tree(vm_root);
-        }
-        assert_ne!(frame.ip, 0, "trying to return to 0!");
-        return;
+        arch::load_tree(old_vm_root.expect("Returning to process with no vm_root"));
     } else {
-        PerCpu::set_running(None);
-        arch::sleep_forever()
+        process::maybe_run_usermode_program();
     }
+    assert_ne!(frame.ip, 0, "Returning from interrupt to IP 0");
 }
 
 fn handle_breakpoint(frame: &mut InterruptFrame) {

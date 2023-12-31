@@ -4,7 +4,7 @@ set -euo pipefail
 
 stdio_usage="-serial stdio"
 debug="-s"
-smp="-smp 8"
+smp="-smp 2"
 
 while getopts "imdu:" opt; do
   case ${opt} in

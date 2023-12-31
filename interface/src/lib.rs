@@ -9,7 +9,7 @@ pub struct TaskId(pub u64);
 #[non_exhaustive]
 pub enum Syscall<'a> {
     Println(&'a str),
-    Exit(u32),
+    Exit(u64),
     Spawn(&'a str, usize),
 
     DgSocket,

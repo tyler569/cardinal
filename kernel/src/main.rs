@@ -54,6 +54,9 @@ unsafe extern "C" fn kernel_main() -> ! {
 
     start_aps();
 
+    // println!("spawning int3 task");
+    // executor::spawn(async { asm!("int3"); });
+
     println!("spawning sleep task");
     executor::spawn(async {
         loop {
@@ -89,7 +92,10 @@ unsafe extern "C" fn kernel_main() -> ! {
     //     ]);
     // }
 
-    arch::enable_interrupts();
+    for _ in 0..10 {
+        load_and_start_usermode_program(0);
+    }
+
     arch::sleep_forever()
 }
 
@@ -106,7 +112,6 @@ unsafe extern "C" fn ap_init(info: *const limine::smp::LimineCpuInfo) -> ! {
 }
 
 unsafe fn ap_main() -> ! {
-    arch::enable_interrupts();
     arch::sleep_forever();
 }
 
