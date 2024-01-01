@@ -1,5 +1,8 @@
 #![no_std]
 
+#[macro_use]
+extern crate num_derive;
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct TaskId(pub u64);
@@ -14,21 +17,20 @@ pub enum Syscall<'a> {
 
     DgSocket,
     DgWrite(u64, &'a [u8]),
-    DgRead(u64, *mut [u8]),
-
-    // DgWriteAsync(u64, &'a [u8], TaskId),
-    ReadAsync(u64, &'a [u8], TaskId),
-    // Wait(&'a [TaskId])
+    DgRead(u64, &'a mut [u8]),
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum SyscallReturn {
+    Complete(u64),
+    Error(Error),
+    NotComplete,
+}
+
+#[repr(u64)]
+#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive, ToPrimitive)]
 pub enum Error {
-    EAGAIN = 1,
-    EINVAL = 2,
-}
-
-impl Error {
-    pub fn return_value(self) -> usize {
-        !(self as usize)
-    }
+    InvalidSyscall,
+    InvalidArgument,
+    NoSuchSocket,
 }

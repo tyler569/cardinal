@@ -6,7 +6,6 @@ extern crate alloc;
 
 pub use cardinal3_allocator as allocator;
 
-mod async_rw;
 pub mod executor;
 pub mod syscall;
 

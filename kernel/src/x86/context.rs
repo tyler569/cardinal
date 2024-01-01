@@ -4,6 +4,7 @@ use crate::x86;
 use core::arch::asm;
 use core::fmt::Debug;
 use core::fmt::Formatter;
+use cardinal3_interface::SyscallReturn;
 
 #[repr(C)]
 #[derive(Debug, Default, Clone)]
@@ -51,8 +52,20 @@ impl InterruptFrame {
         unsafe { &*(self.rax as *const cardinal3_interface::Syscall) }
     }
 
-    pub fn set_syscall_return(&mut self, value: usize) {
-        self.rax = value as u64;
+    pub fn set_syscall_return(&mut self, value: SyscallReturn) {
+        match value {
+            SyscallReturn::Complete(v) => {
+                self.rax = 0;
+                self.rdi = v;
+            }
+            SyscallReturn::NotComplete => {
+                self.rax = 1;
+            }
+            SyscallReturn::Error(v) => {
+                self.rax = 2;
+                self.rdi = v as u64;
+            }
+        }
     }
 }
 
