@@ -4,7 +4,7 @@
 extern crate num_derive;
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TaskId(pub u64);
 
 #[repr(C)]
@@ -18,6 +18,7 @@ pub enum Syscall<'a> {
     DgSocket,
     DgWrite(u64, &'a [u8]),
     DgRead(u64, &'a mut [u8]),
+    DgClose(u64),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

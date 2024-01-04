@@ -3,7 +3,7 @@ use alloc::collections::{BTreeMap, VecDeque};
 use alloc::sync::Arc;
 use core::future::Future;
 use core::pin::Pin;
-use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use core::sync::atomic::{AtomicU64, Ordering};
 use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 
 struct Task {
@@ -11,7 +11,6 @@ struct Task {
 }
 
 pub struct Executor {
-    work_to_do: AtomicBool,
     tasks_to_poll: VecDeque<u64>,
     next_id: AtomicU64,
     tasks: BTreeMap<u64, Task>,
@@ -22,16 +21,15 @@ static mut EXECUTOR: Executor = Executor::new();
 impl Executor {
     pub const fn new() -> Self {
         Self {
-            work_to_do: AtomicBool::new(false),
             tasks_to_poll: VecDeque::new(),
             next_id: AtomicU64::new(1),
             tasks: BTreeMap::new(),
         }
     }
 
-    pub fn spawn(&mut self, _future: impl Future<Output = ()> + 'static) {
+    pub fn spawn(&mut self, future: impl Future<Output = ()> + 'static) {
         let task = Task {
-            future: Box::pin(_future),
+            future: Box::pin(future),
         };
         let id = self.next_id.fetch_add(1, Ordering::SeqCst);
         self.tasks.insert(id, task);
@@ -66,7 +64,6 @@ unsafe fn exec_wake(data: *const ()) {
     let wd = *(data as *mut WakerData);
     unsafe {
         EXECUTOR.tasks_to_poll.push_back(wd.id);
-        EXECUTOR.work_to_do.store(true, Ordering::SeqCst);
     };
 }
 
