@@ -7,6 +7,7 @@ use crate::x86::{cpu, lapic, sleep_forever_no_irq, SERIAL};
 use crate::{arch, executor, process, syscalls};
 use core::arch::asm;
 use core::sync::atomic::{AtomicU64, Ordering};
+use crate::ipi::handle_ipi_irq;
 
 static INTERRUPT_COUNT: AtomicU64 = AtomicU64::new(0);
 
@@ -148,7 +149,8 @@ fn handle_syscall(frame: &mut InterruptFrame) {
 }
 
 fn handle_ipi(_frame: &mut InterruptFrame) {
-    println!("CPU {} IPI", cpu_num());
+    // println!("CPU {} IPI", cpu_num());
+    handle_ipi_irq();
 
     lapic::eoi();
 }

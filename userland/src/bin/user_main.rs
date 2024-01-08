@@ -6,6 +6,9 @@ use cardinal3_userland::syscall;
 #[no_mangle]
 fn cardinal_main(_arg: usize) {
     syscall::println("Hello, world!");
+
+    loop {}
+
     syscall::exit(0);
 
     /*

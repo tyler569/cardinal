@@ -58,8 +58,8 @@ pub fn cr2() -> u64 {
     value
 }
 
-pub fn cpu_num() -> u32 {
-    cpuid(1, 0)[1] >> 24
+pub fn cpu_num() -> usize {
+    (cpuid(1, 0)[1] >> 24) as usize
 }
 
 #[derive(Copy, Clone)]

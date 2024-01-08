@@ -7,6 +7,8 @@ use alloc::collections::{BTreeMap, VecDeque};
 use core::sync::atomic::{AtomicU64, Ordering};
 use elf::endian::LittleEndian;
 use spin::Mutex;
+use crate::ipi::submit_ipi_to_all_cpus;
+use crate::x86::print_backtrace_from_context;
 
 #[derive(Debug)]
 pub struct Process {
@@ -16,7 +18,7 @@ pub struct Process {
     exit_code: Option<u64>,
     pid: u64,
     sched_in: u64,
-    on_cpu: Option<u32>,
+    on_cpu: Option<usize>,
 }
 
 // Rust is mad because of the PageTable, but we'll never modify that through this object
@@ -151,7 +153,7 @@ impl Process {
         self.context = Context::new(frame);
     }
 
-    pub fn set_on_cpu(&mut self, on_cpu: Option<u32>) {
+    pub fn set_on_cpu(&mut self, on_cpu: Option<usize>) {
         self.on_cpu = on_cpu;
     }
 }
@@ -216,4 +218,16 @@ pub fn with<T, F: FnOnce(&mut Process) -> T>(pid: u64, func: F) -> Option<T> {
 
 pub fn remove(pid: u64) {
     ALL.lock().remove(&pid);
+}
+
+pub fn backtrace_local() {
+    let Some(pid) = PerCpu::running() else {
+        return;
+    };
+
+    with(pid, |p| print_backtrace_from_context(&p.context));
+}
+
+pub fn backtrace_all() {
+    submit_ipi_to_all_cpus(|| { backtrace_local() });
 }

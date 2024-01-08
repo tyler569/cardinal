@@ -1,9 +1,12 @@
+use alloc::collections::VecDeque;
 use crate::executor::Executor;
 use crate::timer::Timer;
 use crate::{arch, NUM_CPUS};
 use core::cell::UnsafeCell;
 use core::ops::{Index, IndexMut};
-use spin::Lazy;
+use spin::{Lazy, Mutex};
+use crate::ipi::IpiFunction;
+use crate::x86::cpu_num;
 
 pub struct PerCpu {
     this: *const UnsafeCell<Self>,
@@ -11,6 +14,7 @@ pub struct PerCpu {
     timer: Timer,
     executor: Executor,
     running: Option<u64>,
+    ipi_queue: Mutex<VecDeque<IpiFunction>>
 }
 
 impl PerCpu {
@@ -21,6 +25,7 @@ impl PerCpu {
             timer: Timer::new(),
             executor: Executor::new(),
             running: None,
+            ipi_queue: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -32,16 +37,23 @@ impl PerCpu {
         }
     }
 
+    pub unsafe fn cpu(cpu: usize) -> &'static Self {
+        &*PER_CPU[cpu].get()
+    }
+
+    // unsafe fn cpu_mut is impossible because we maintain an invariant that mutable access to PerCPU
+    // is only performed by the current CPU.
+
     pub fn get() -> &'static Self {
-        unsafe { &*PER_CPU[arch::cpu_num() as usize].get() }
+        unsafe { Self::cpu(cpu_num()) }
     }
 
     pub fn get_mut() -> &'static mut Self {
-        unsafe { &mut *PER_CPU[arch::cpu_num() as usize].get() }
+        unsafe { &mut *PER_CPU[cpu_num()].get() }
     }
 
     pub fn executor_for_cpu(cpu: usize) -> &'static Executor {
-        &unsafe { &*PER_CPU[cpu].get() }.executor
+        &unsafe { Self::cpu(cpu) }.executor
     }
 
     pub fn running() -> Option<u64> {
@@ -66,6 +78,14 @@ impl PerCpu {
 
     pub fn arch() -> &'static arch::Cpu {
         &Self::get().arch
+    }
+
+    pub fn submit_ipi<F: FnOnce() + 'static>(cpu: usize, function: F) {
+        unsafe { Self::cpu(cpu) }.ipi_queue.lock().push_back(IpiFunction::new(function));
+    }
+
+    pub fn ipi_queue() -> &'static Mutex<VecDeque<IpiFunction>> {
+        &Self::get().ipi_queue
     }
 }
 

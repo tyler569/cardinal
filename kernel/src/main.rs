@@ -13,6 +13,7 @@ use core::arch::asm;
 use core::time::Duration;
 
 mod executor;
+mod ipi;
 mod limine;
 mod mem;
 mod net;
@@ -68,6 +69,7 @@ unsafe extern "C" fn kernel_main() -> ! {
             match c {
                 b's' => load_and_start_usermode_program(0),
                 b'm' => pmm::summary(),
+                b'p' => process::backtrace_all(),
                 _ => {}
             }
             print!("{}", c as char);

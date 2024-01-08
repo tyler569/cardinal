@@ -56,7 +56,7 @@ impl Executor {
 
 #[derive(Clone, Copy, Debug)]
 struct WakerData {
-    cpu: u32,
+    cpu: usize,
     id: u64,
 }
 
