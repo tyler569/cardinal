@@ -149,7 +149,6 @@ fn handle_syscall(frame: &mut InterruptFrame) {
 }
 
 fn handle_ipi(_frame: &mut InterruptFrame) {
-    // println!("CPU {} IPI", cpu_num());
     handle_ipi_irq();
 
     lapic::eoi();

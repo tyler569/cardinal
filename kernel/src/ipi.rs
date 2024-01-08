@@ -2,6 +2,7 @@ use alloc::boxed::Box;
 use crate::NUM_CPUS;
 use crate::per_cpu::PerCpu;
 use crate::arch::broadcast_ipi;
+use crate::x86::send_ipi;
 
 pub struct IpiFunction {
     function: Box<dyn FnOnce()>,
@@ -29,4 +30,10 @@ pub fn submit_ipi_to_all_cpus<F: FnOnce() + Clone + 'static>(function: F) {
     }
 
     broadcast_ipi(129);
+}
+
+#[allow(unused)]
+pub fn submit_ipi_to_cpu<F: FnOnce() + 'static>(cpu: usize, function: F) {
+    PerCpu::submit_ipi(cpu, function);
+    send_ipi(cpu as u8, 129);
 }
