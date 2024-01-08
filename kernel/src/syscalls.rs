@@ -6,6 +6,8 @@ use cardinal3_interface::{Error, Syscall, SyscallReturn};
 
 pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
     let syscall = frame.syscall_info();
+    let _task_id = frame.task_id();
+    let _tasks_to_wake = frame.tasks_to_wake();
     let pid = PerCpu::running().unwrap_or(0);
 
     println!(
@@ -31,4 +33,5 @@ pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
     };
 
     frame.set_syscall_return(result);
+    frame.set_tasks_to_wake_count(0);
 }

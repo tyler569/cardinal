@@ -95,13 +95,12 @@ pub fn interrupts_are_disabled() -> bool {
     }
 }
 
-#[allow(unused)]
 pub fn send_ipi(cpu_id: u8, vector: u8) {
-    lapic::send_ipi(cpu_id, vector);
+    lapic::send_ipi(cpu_id, vector)
 }
 
 pub fn broadcast_ipi(vector: u8) {
-    lapic::broadcast_ipi(vector);
+    lapic::broadcast_ipi(vector)
 }
 
 pub fn sleep_forever() -> ! {
@@ -162,7 +161,7 @@ pub fn print_backtrace_from(mut bp: usize) {
         bp = unsafe { *(bp as *const usize) };
 
         if physical_address(bp).is_none() || physical_address(bp + 8).is_none() {
-            println!("backtrace left mapped memory at {:x}", bp);
+            println!("backtrace left mapped memory at {:#x}", bp);
             break;
         }
     }

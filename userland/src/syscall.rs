@@ -2,46 +2,40 @@ use cardinal3_interface::{Error, Syscall, SyscallReturn};
 use num_traits::FromPrimitive;
 use core::arch::asm;
 
-fn syscall(args: &Syscall) -> SyscallReturn {
+pub(crate) fn syscall_future(args: &Syscall, task_id: u64, tasks_to_wake: &mut [u64]) -> (SyscallReturn, usize) {
     let return_type: u64;
     let return_value: u64;
+    let wake_count: usize;
     unsafe {
         asm!(
             "int 0x80",
-            inout("rax") args as *const _ as usize => return_type,
-            out("rdi") return_value,
+            inout("rax") args as *const _ => return_type,
+            inout("rdi") task_id => return_value,
+            in("rsi") tasks_to_wake.as_mut_ptr(),
+            inout("rdx") tasks_to_wake.len() => wake_count,
             options(nostack)
         );
     }
-    match return_type {
-        0 => SyscallReturn::Complete(return_value),
-        1 => SyscallReturn::NotComplete,
-        2 => SyscallReturn::Error(Error::from_u64(return_value).expect("Invalid error return")),
-        _ => panic!("Invalid syscall return"),
-    }
+    (
+        match return_type {
+            0 => SyscallReturn::Complete(return_value),
+            1 => SyscallReturn::NotComplete,
+            2 => SyscallReturn::Error(Error::from_u64(return_value).expect("Invalid error return")),
+            _ => panic!("Invalid syscall return"),
+        },
+        wake_count
+    )
+}
+
+pub fn syscall_simple(args: &Syscall) -> SyscallReturn {
+    syscall_future(args, 0, &mut [0; 0]).0
 }
 
 pub fn println(string: &str) {
-    syscall(&Syscall::Println(string));
+    syscall_simple(&Syscall::Println(string));
 }
 
 pub fn exit(code: u64) -> ! {
-    syscall(&Syscall::Exit(code));
+    syscall_simple(&Syscall::Exit(code));
     unreachable!();
 }
-
-// pub fn spawn(name: &str, arg: usize) -> usize {
-//     syscall(&Syscall::Spawn(name, arg))
-// }
-//
-// pub fn socket() -> u64 {
-//     syscall(&Syscall::DgSocket) as u64
-// }
-//
-// pub fn write(sn: u64, data: &[u8]) -> usize {
-//     syscall(&Syscall::DgWrite(sn, data))
-// }
-//
-// pub fn async_read(sn: u64, data: &mut [u8]) -> u64 {
-//     syscall(&Syscall::DgRead(sn, data)) as u64
-// }

@@ -90,7 +90,7 @@ unsafe extern "C" fn kernel_main() -> ! {
     //     ]);
     // }
 
-    for _ in 0..10 {
+    for _ in 0..1 {
         load_and_start_usermode_program(0);
     }
 

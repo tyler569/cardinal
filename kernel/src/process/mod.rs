@@ -53,17 +53,37 @@ impl Process {
                 let mut flags: PageFlags = PageFlags::READ | PageFlags::USER;
                 if ph.p_flags & elf::abi::PF_W != 0 {
                     flags |= PageFlags::WRITE;
-                }
-                if ph.p_flags & elf::abi::PF_X != 0 {
-                    flags |= PageFlags::EXECUTE;
-                }
-                for i in 0..(ph.p_memsz as usize + 0xfff) / 0x1000 {
-                    let page_vma = base + ph.p_offset as usize + i * 0x1000;
-                    let page_phy = arch::physical_address(page_vma).unwrap() & !0xfff;
-                    let mapped_vma = (ph.p_vaddr as usize + i * 0x1000) & !0xfff;
 
-                    // println!("map {:x} to {:x} with flags {:?}", page_phy, mapped_vma, flags);
-                    arch::map_in_table(vm_root, mapped_vma, page_phy, flags);
+                    for i in 0..(ph.p_memsz as usize + 0xfff) / 0x1000 {
+                        let offset = i * 0x1000;
+                        let page_vma = base + ph.p_offset as usize + offset;
+                        let page_phy = pmm::alloc().unwrap();
+                        let hhdm_vma = arch::direct_map_offset(page_phy);
+                        let mapped_vma = ph.p_vaddr as usize + offset;
+
+                        let copy_len = core::cmp::min(0x1000, (ph.p_filesz as usize).saturating_sub(offset));
+                        let zero_len = 0x1000 - copy_len;
+
+                        if copy_len > 0 {
+                            core::ptr::copy_nonoverlapping(page_vma as *const u8, hhdm_vma as *mut u8, copy_len);
+                        }
+                        if zero_len > 0 {
+                            core::ptr::write_bytes((hhdm_vma + copy_len) as *mut u8, 0, zero_len);
+                        }
+
+                        arch::map_in_table(vm_root, mapped_vma, page_phy, flags);
+                    }
+                } else {
+                    if ph.p_flags & elf::abi::PF_X != 0 {
+                        flags |= PageFlags::EXECUTE;
+                    }
+                    for i in 0..(ph.p_memsz as usize + 0xfff) / 0x1000 {
+                        let page_vma = base + ph.p_offset as usize + i * 0x1000;
+                        let page_phy = arch::physical_address(page_vma).unwrap() & !0xfff;
+                        let mapped_vma = (ph.p_vaddr as usize + i * 0x1000) & !0xfff;
+
+                        arch::map_in_table(vm_root, mapped_vma, page_phy, flags);
+                    }
                 }
             }
         }

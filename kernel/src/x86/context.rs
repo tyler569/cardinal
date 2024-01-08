@@ -52,6 +52,16 @@ impl InterruptFrame {
         unsafe { &*(self.rax as *const cardinal3_interface::Syscall) }
     }
 
+    pub fn task_id(&self) -> u64 {
+        self.rdi
+    }
+
+    pub fn tasks_to_wake(&self) -> &mut [u64] {
+        unsafe {
+            core::slice::from_raw_parts_mut(self.rsi as *mut u64, self.rdx as usize)
+        }
+    }
+
     pub fn set_syscall_return(&mut self, value: SyscallReturn) {
         match value {
             SyscallReturn::Complete(v) => {
@@ -66,6 +76,10 @@ impl InterruptFrame {
                 self.rdi = v as u64;
             }
         }
+    }
+
+    pub fn set_tasks_to_wake_count(&mut self, count: usize) {
+        self.rdx = count as u64;
     }
 }
 
@@ -146,7 +160,7 @@ impl Context {
 }
 
 impl Debug for Context {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Context")
             .field("frame", &self.frame)
             .field("fpu_context", &"[...]")
