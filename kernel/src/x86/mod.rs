@@ -160,5 +160,15 @@ pub fn print_backtrace_from(mut bp: usize) {
         let ip = unsafe { *(bp as *const usize).offset(1) };
         println!("({:#x}) <>", ip);
         bp = unsafe { *(bp as *const usize) };
+
+        if physical_address(bp).is_none() || physical_address(bp + 8).is_none() {
+            println!("backtrace left mapped memory at {:x}", bp);
+            break;
+        }
     }
+}
+
+pub fn print_backtrace_from_with_ip(ip: usize, bp: usize) {
+    println!("({:#x}) <>", ip);
+    print_backtrace_from(bp);
 }
