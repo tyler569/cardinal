@@ -1,16 +1,14 @@
 mod map;
 
 use crate::arch::{Context, InterruptFrame, PageTable};
+use crate::ipi::submit_ipi_to_all_cpus;
 use crate::per_cpu::PerCpu;
-use crate::vmm::PageFlags;
-use crate::{arch, elf_data, pmm};
 use crate::println;
+use crate::x86::print_backtrace_from_context;
+use crate::{arch, elf_data};
 use alloc::collections::{BTreeMap, VecDeque};
 use core::sync::atomic::{AtomicU64, Ordering};
-use elf::endian::LittleEndian;
 use spin::Mutex;
-use crate::ipi::submit_ipi_to_all_cpus;
-use crate::x86::print_backtrace_from_context;
 
 pub struct Process {
     context: Context,
@@ -20,7 +18,6 @@ pub struct Process {
     pid: u64,
     sched_in: u64,
     on_cpu: Option<usize>,
-    elf_file: elf::ElfBytes<'static, LittleEndian>,
 }
 
 // Rust is mad because of the PageTable, but we'll never modify that through this object
@@ -61,7 +58,6 @@ impl Process {
             pid,
             sched_in: 0,
             on_cpu: None,
-            elf_file: efile,
         };
 
         ALL.lock().insert(pid, process);
@@ -121,24 +117,6 @@ impl Process {
 
     pub fn set_on_cpu(&mut self, on_cpu: Option<usize>) {
         self.on_cpu = on_cpu;
-    }
-
-    pub fn get_symbol_name(&self, address: usize) -> Option<&'static str> {
-        let (table, strings) = self.elf_file.symbol_table().ok()??;
-        let mut best_match = None;
-        let mut best_match_address = usize::MAX;
-        for symbol in table.iter() {
-            let addr = symbol.st_value as usize;
-            if addr >= address && addr < best_match_address {
-                best_match = Some(symbol);
-                best_match_address = addr;
-            }
-            if addr == address {
-                break;
-            }
-        }
-
-        best_match.map(|sym| strings.get(sym.st_name as usize).unwrap())
     }
 }
 
@@ -213,5 +191,5 @@ pub fn backtrace_local() {
 }
 
 pub fn backtrace_all() {
-    submit_ipi_to_all_cpus(|| { backtrace_local() });
+    submit_ipi_to_all_cpus(|| backtrace_local());
 }

@@ -1,6 +1,6 @@
-use crate::limine::mmap::{LimineMmapEntryType};
-use crate::print::println;
 use crate::limine;
+use crate::limine::mmap::LimineMmapEntryType;
+use crate::print::println;
 use alloc::vec::Vec;
 use spin::Mutex;
 
@@ -9,7 +9,9 @@ enum PageInfo {
     NoMemory,
     Free,
     Reserved,
-    InUse { refcount: u16 },
+    InUse {
+        refcount: u16,
+    },
     Kernel,
 
     // We don't support refcounting yet, so there's no code for leaking pages.
@@ -120,7 +122,9 @@ pub fn free(page: u64) {
     }
     page_info[page] = match page_info[page] {
         PageInfo::InUse { refcount: 1 } => PageInfo::Free,
-        PageInfo::InUse { refcount } => PageInfo::InUse { refcount: refcount - 1 },
+        PageInfo::InUse { refcount } => PageInfo::InUse {
+            refcount: refcount - 1,
+        },
         other => other,
     }
 }

@@ -1,5 +1,5 @@
-use core::fmt::Write;
 use crate::syscall;
+use core::fmt::Write;
 
 pub struct SyscallPrint;
 

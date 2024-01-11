@@ -43,7 +43,11 @@ static mut N: usize = 0;
 #[no_mangle]
 pub extern "C" fn _start(arg: usize) {
     static_heap_init();
-    println!("userland started..., N is {}, got is {:?}", unsafe { N }, unsafe { &_GLOBAL_OFFSET_TABLE_ as *const u8});
+    println!(
+        "userland started..., N is {}, got is {:?}",
+        unsafe { N },
+        unsafe { &_GLOBAL_OFFSET_TABLE_ as *const u8 }
+    );
     unsafe {
         cardinal_main(arg);
     }

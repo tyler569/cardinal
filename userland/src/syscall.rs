@@ -1,8 +1,12 @@
 use cardinal3_interface::{Error, Syscall, SyscallReturn};
-use num_traits::FromPrimitive;
 use core::arch::asm;
+use num_traits::FromPrimitive;
 
-pub(crate) fn syscall_future(args: &Syscall, task_id: u64, tasks_to_wake: &mut [u64]) -> (SyscallReturn, usize) {
+pub(crate) fn syscall_future(
+    args: &Syscall,
+    task_id: u64,
+    tasks_to_wake: &mut [u64],
+) -> (SyscallReturn, usize) {
     let return_type: u64;
     let return_value: u64;
     let wake_count: usize;
@@ -23,7 +27,7 @@ pub(crate) fn syscall_future(args: &Syscall, task_id: u64, tasks_to_wake: &mut [
             2 => SyscallReturn::Error(Error::from_u64(return_value).expect("Invalid error return")),
             _ => panic!("Invalid syscall return"),
         },
-        wake_count
+        wake_count,
     )
 }
 

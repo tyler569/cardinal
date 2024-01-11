@@ -1,18 +1,20 @@
+use crate::arch::PageTable;
+use crate::vmm::PageFlags;
+use crate::{arch, pmm};
 use core::cmp::min;
-use elf::ElfBytes;
 use elf::endian::LittleEndian;
 use elf::segment::ProgramHeader;
-use crate::arch::PageTable;
-use crate::{arch, pmm};
-use crate::vmm::PageFlags;
+use elf::ElfBytes;
 
-pub unsafe fn map_elf_into_address_space(elf_data: &[u8], vm_root: *mut PageTable) -> ElfBytes<LittleEndian> {
+pub unsafe fn map_elf_into_address_space(
+    elf_data: &[u8],
+    vm_root: *mut PageTable,
+) -> ElfBytes<LittleEndian> {
     let base = elf_data.as_ptr() as usize;
     let elf = ElfBytes::minimal_parse(elf_data).expect("Invalid elf");
 
     for ph in elf.segments().unwrap() {
         if ph.p_type == elf::abi::PT_LOAD {
-            let mut flags: PageFlags = PageFlags::READ | PageFlags::USER;
             if ph.p_flags & elf::abi::PF_W != 0 {
                 create_rw_mapping(&ph, base, vm_root);
             } else {
@@ -44,10 +46,12 @@ pub fn mapping_pages(ph: &ProgramHeader, base: usize) -> impl Iterator<Item = (u
     let file_base = (base + ph.p_offset as usize) & !arch::PAGE_MASK;
     let vaddr_base = ph.p_vaddr as usize & !arch::PAGE_MASK;
 
-    (0..number).map(move |n| (
-        file_base + n * arch::PAGE_SIZE,
-        vaddr_base + n * arch::PAGE_SIZE,
-    ))
+    (0..number).map(move |n| {
+        (
+            file_base + n * arch::PAGE_SIZE,
+            vaddr_base + n * arch::PAGE_SIZE,
+        )
+    })
 }
 
 pub unsafe fn create_ro_mapping(ph: &ProgramHeader, base: usize, vm_root: *mut PageTable) {
@@ -74,7 +78,11 @@ pub unsafe fn create_rw_mapping(ph: &ProgramHeader, base: usize, vm_root: *mut P
 
         let copy_len = min(arch::PAGE_SIZE, copy_end.saturating_sub(user_page));
         if copy_len > 0 {
-            core::ptr::copy_nonoverlapping(file_page as *const u8, copy_mapped as *mut u8, copy_len);
+            core::ptr::copy_nonoverlapping(
+                file_page as *const u8,
+                copy_mapped as *mut u8,
+                copy_len,
+            );
         }
         let zero_len = arch::PAGE_SIZE - copy_len;
         if zero_len > 0 {

@@ -1,11 +1,11 @@
 use crate::arch::cpu_num;
 use crate::per_cpu::PerCpu;
 use crate::x86;
+use bitflags::bitflags;
+use cardinal3_interface::SyscallReturn;
 use core::arch::asm;
 use core::fmt::Debug;
 use core::fmt::Formatter;
-use bitflags::bitflags;
-use cardinal3_interface::SyscallReturn;
 
 #[repr(C)]
 #[derive(Debug, Default, Clone)]
@@ -87,9 +87,7 @@ impl InterruptFrame {
     }
 
     pub fn tasks_to_wake(&self) -> &mut [u64] {
-        unsafe {
-            core::slice::from_raw_parts_mut(self.rsi as *mut u64, self.rdx as usize)
-        }
+        unsafe { core::slice::from_raw_parts_mut(self.rsi as *mut u64, self.rdx as usize) }
     }
 
     pub fn set_syscall_return(&mut self, value: SyscallReturn) {
@@ -115,7 +113,13 @@ impl InterruptFrame {
 
 impl core::fmt::Display for InterruptFrame {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "frame at {:p}, cpu {}, pid {:?}", self, cpu_num(), PerCpu::running())?;
+        writeln!(
+            f,
+            "frame at {:p}, cpu {}, pid {:?}",
+            self,
+            cpu_num(),
+            PerCpu::running()
+        )?;
         writeln!(
             f,
             " ax {:016x} bx {:016x} cx {:016x} dx {:016x}",

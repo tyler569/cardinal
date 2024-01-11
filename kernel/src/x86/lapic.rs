@@ -1,11 +1,9 @@
-use spin::Lazy;
 use crate::print::println;
 use crate::x86::{cpu, direct_map_offset};
+use spin::Lazy;
 
 pub const DEFAULT_ADDRESS: u64 = 0xfee0_0000;
-pub static MAPPED_ADDRESS: Lazy<usize> = Lazy::new(|| {
-    direct_map_offset(DEFAULT_ADDRESS)
-});
+pub static MAPPED_ADDRESS: Lazy<usize> = Lazy::new(|| direct_map_offset(DEFAULT_ADDRESS));
 
 unsafe fn relocate() {
     cpu::wrmsr(cpu::IA32_LAPIC_BASE, DEFAULT_ADDRESS as u64 | 1 << 11);

@@ -1,4 +1,4 @@
-use crate::{limine, process};
+use crate::limine;
 use crate::pci::PciAddress;
 use crate::print::println;
 use core::arch::asm;
@@ -22,11 +22,8 @@ mod serial;
 pub use context::{Context, InterruptFrame};
 pub use cpu::{cpu_num, Cpu};
 pub use long_jump::{long_jump_context, long_jump_cs};
-pub use page::{
-    free_tree, load_tree, map_in_table, new_tree, physical_address, PageTable,
-};
+pub use page::{free_tree, load_tree, map_in_table, new_tree, physical_address, PageTable};
 pub use serial::SERIAL;
-use crate::per_cpu::PerCpu;
 
 static DIRECT_MAP_OFFSET: Lazy<usize> =
     Lazy::new(|| unsafe { (**limine::HHDM.response.get()).offset } as usize);
@@ -167,8 +164,6 @@ pub fn print_backtrace() {
 }
 
 pub fn print_backtrace_from(mut bp: usize) {
-    let pid = PerCpu::running();
-
     while bp != 0 {
         let ip = unsafe { *(bp as *const usize).offset(1) };
         println!("({:#x}) <>", ip);

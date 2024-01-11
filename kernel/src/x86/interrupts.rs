@@ -1,13 +1,13 @@
+use crate::ipi::handle_ipi_irq;
 use crate::per_cpu::PerCpu;
 use crate::println;
 use crate::process::ProcessDisposition;
 use crate::x86::context::InterruptFrame;
 use crate::x86::cpu::cpu_num;
-use crate::x86::{cpu, lapic, sleep_forever_no_irq, SERIAL, print_backtrace_from_frame};
+use crate::x86::{cpu, lapic, print_backtrace_from_frame, sleep_forever_no_irq, SERIAL};
 use crate::{arch, executor, process, syscalls};
 use core::arch::asm;
 use core::sync::atomic::{AtomicU64, Ordering};
-use crate::ipi::handle_ipi_irq;
 
 static INTERRUPT_COUNT: AtomicU64 = AtomicU64::new(0);
 
@@ -175,7 +175,10 @@ fn unexpected_interrupt(frame: &InterruptFrame) {
         cpu_num(),
         INTERRUPT_INFO[frame.interrupt_number as usize].name
     );
-    panic!("Unhandled unexpected interrupt {:x} ({})\n{}", frame.interrupt_number, frame.interrupt_number, frame);
+    panic!(
+        "Unhandled unexpected interrupt {:x} ({})\n{}",
+        frame.interrupt_number, frame.interrupt_number, frame
+    );
 }
 
 #[derive(Debug)]

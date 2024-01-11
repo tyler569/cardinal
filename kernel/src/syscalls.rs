@@ -1,9 +1,9 @@
 use crate::net::{socket, Socket};
 use crate::per_cpu::PerCpu;
+use crate::print::print;
 use crate::println;
 use crate::{arch, process};
 use cardinal3_interface::{Error, Syscall, SyscallReturn};
-use crate::print::print;
 
 pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
     let syscall = frame.syscall_info();
@@ -13,14 +13,13 @@ pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
 
     match syscall {
         Syscall::Print(arg) => print!("{}", arg),
-        _ =>
-            println!(
-                "[cpu:{} pid:{} syscall:{:?} tsc:{}]",
-                arch::cpu_num(),
-                pid,
-                syscall,
-                arch::rdtsc(),
-            ),
+        _ => println!(
+            "[cpu:{} pid:{} syscall:{:?} tsc:{}]",
+            arch::cpu_num(),
+            pid,
+            syscall,
+            arch::rdtsc(),
+        ),
     }
 
     let result = match syscall {
@@ -28,10 +27,8 @@ pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
         Syscall::Exit(code) => {
             process::exit(*code);
             SyscallReturn::Complete(0)
-        },
-        Syscall::Spawn(name, arg) => {
-            SyscallReturn::Complete(process::spawn(name, *arg))
-        },
+        }
+        Syscall::Spawn(name, arg) => SyscallReturn::Complete(process::spawn(name, *arg)),
         Syscall::DgSocket => SyscallReturn::Complete(Socket::new()),
         Syscall::DgRead(sn, buf) => socket::read(*sn, buf),
         Syscall::DgWrite(sn, buf) => socket::write(*sn, buf),

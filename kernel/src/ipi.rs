@@ -1,8 +1,8 @@
-use alloc::boxed::Box;
-use crate::NUM_CPUS;
-use crate::per_cpu::PerCpu;
 use crate::arch::broadcast_ipi;
+use crate::per_cpu::PerCpu;
 use crate::x86::send_ipi;
+use crate::NUM_CPUS;
+use alloc::boxed::Box;
 
 pub struct IpiFunction {
     function: Box<dyn FnOnce()>,
@@ -11,7 +11,7 @@ pub struct IpiFunction {
 impl IpiFunction {
     pub fn new<F: FnOnce() + 'static>(function: F) -> Self {
         Self {
-            function: Box::new(function)
+            function: Box::new(function),
         }
     }
 
@@ -21,7 +21,10 @@ impl IpiFunction {
 }
 
 pub fn handle_ipi_irq() {
-    PerCpu::ipi_queue().lock().drain(..).for_each(|func| func.call());
+    PerCpu::ipi_queue()
+        .lock()
+        .drain(..)
+        .for_each(|func| func.call());
 }
 
 pub fn submit_ipi_to_all_cpus<F: FnOnce() + Clone + 'static>(function: F) {

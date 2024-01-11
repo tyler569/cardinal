@@ -1,12 +1,12 @@
-use alloc::collections::VecDeque;
 use crate::executor::Executor;
+use crate::ipi::IpiFunction;
 use crate::timer::Timer;
+use crate::x86::cpu_num;
 use crate::{arch, NUM_CPUS};
+use alloc::collections::VecDeque;
 use core::cell::UnsafeCell;
 use core::ops::{Index, IndexMut};
 use spin::{Lazy, Mutex};
-use crate::ipi::IpiFunction;
-use crate::x86::cpu_num;
 
 pub struct PerCpu {
     this: *const UnsafeCell<Self>,
@@ -14,7 +14,7 @@ pub struct PerCpu {
     timer: Timer,
     executor: Executor,
     running: Option<u64>,
-    ipi_queue: Mutex<VecDeque<IpiFunction>>
+    ipi_queue: Mutex<VecDeque<IpiFunction>>,
 }
 
 impl PerCpu {
@@ -81,7 +81,10 @@ impl PerCpu {
     }
 
     pub fn submit_ipi<F: FnOnce() + 'static>(cpu: usize, function: F) {
-        unsafe { Self::cpu(cpu) }.ipi_queue.lock().push_back(IpiFunction::new(function));
+        unsafe { Self::cpu(cpu) }
+            .ipi_queue
+            .lock()
+            .push_back(IpiFunction::new(function));
     }
 
     pub fn ipi_queue() -> &'static Mutex<VecDeque<IpiFunction>> {
