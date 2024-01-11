@@ -18,7 +18,7 @@ impl SerialPort {
     unsafe fn init(&mut self) {
         pio::write_u8(self.port + 1, 0x00); // Disable all interrupts
         pio::write_u8(self.port + 3, 0x80); // Enable DLAB (set baud rate divisor)
-        pio::write_u8(self.port + 0, 0x01); // Set divisor to 1 (lo byte) 115200 baud
+        pio::write_u8(self.port, 0x01); // Set divisor to 1 (lo byte) 115200 baud
         pio::write_u8(self.port + 1, 0x00); //                  (hi byte)
         pio::write_u8(self.port + 3, 0x03); // 8 bits, no parity, one stop bit
         pio::write_u8(self.port + 2, 0xC7); // Enable FIFO, clear them, with 14-byte threshold

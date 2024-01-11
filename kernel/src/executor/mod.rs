@@ -75,7 +75,7 @@ fn exec_clone(data: *const ()) -> RawWaker {
 unsafe fn exec_wake(data: *const ()) {
     assert!(arch::interrupts_are_disabled());
     let wd = *(data as *mut WakerData);
-    let executor = PerCpu::executor_for_cpu(wd.cpu as usize);
+    let executor = PerCpu::executor_for_cpu(wd.cpu);
     executor.tasks_to_poll.lock().push_back(wd.id);
 }
 

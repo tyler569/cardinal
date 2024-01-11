@@ -49,8 +49,8 @@ impl Rtl8139 {
             tx_slot: 0,
         };
         let mut mac = [0; 6];
-        for i in 0..6 {
-            mac[i] = unsafe { res.io_read_u8(i) };
+        for (i, byte) in mac.iter_mut().enumerate() {
+            *byte = unsafe { res.io_read_u8(i) };
         }
         res.mac = MacAddress::new(mac);
         res

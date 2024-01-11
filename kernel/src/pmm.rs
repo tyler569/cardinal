@@ -115,17 +115,13 @@ pub fn alloc_contiguous(pages: usize) -> Option<u64> {
 pub fn free(page: u64) {
     let mut page_info = PAGE_INFO.lock();
     let page = (page / 4096) as usize;
-    match page_info[page] {
-        PageInfo::InUse { refcount } => {
-            if refcount == 1 {
-                page_info[page] = PageInfo::Free;
-            } else {
-                page_info[page] = PageInfo::InUse {
-                    refcount: refcount - 1,
-                };
-            }
-        }
-        _ => {}
+    if let PageInfo::InUse { refcount } = page_info[page] {
+        assert!(refcount > 0);
+    }
+    page_info[page] = match page_info[page] {
+        PageInfo::InUse { refcount: 1 } => PageInfo::Free,
+        PageInfo::InUse { refcount } => PageInfo::InUse { refcount: refcount - 1 },
+        other => other,
     }
 }
 

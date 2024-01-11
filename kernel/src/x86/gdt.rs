@@ -24,6 +24,7 @@ enum GdtEntry {
     TssSegment { address: u64, length: u32 },
 }
 
+#[allow(clippy::unusual_byte_groupings)]
 impl GdtEntry {
     fn serialize(self) -> (u64, Option<u64>) {
         match self {

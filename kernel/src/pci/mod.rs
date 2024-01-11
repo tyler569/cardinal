@@ -22,7 +22,7 @@ impl PciAddress {
         }
     }
 
-    pub fn to_u32(&self) -> u32 {
+    pub fn to_u32(self) -> u32 {
         ((self.bus as u32) << 16) | ((self.device as u32) << 11) | ((self.function as u32) << 8)
     }
 }
@@ -84,7 +84,7 @@ fn print_device_info(address: PciAddress) {
     let subclass = (class_code >> 16) & 0xff;
     let class = (class_code >> 24) & 0xff;
     let prog_if = (class_code >> 8) & 0xff;
-    let revision = (class_code >> 0) & 0xff;
+    let revision = class_code & 0xff;
     let header_type = (arch::pci_read(address, 12) >> 16) & 0xff;
 
     println!(

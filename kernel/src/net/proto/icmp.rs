@@ -16,13 +16,11 @@ pub enum IcmpType {
 
 impl IcmpHeader {
     pub fn new_echo_request(_data: &[u8]) -> Self {
-        let header = Self {
+        Self {
             icmp_type: IcmpType::EchoRequest,
             icmp_code: 0,
             checksum: 0,
             rest: [0; 4],
-        };
-
-        header
+        }
     }
 }
