@@ -86,7 +86,7 @@ impl InterruptFrame {
         self.rdi
     }
 
-    pub fn tasks_to_wake(&self) -> &mut [u64] {
+    pub fn tasks_to_wake(&self) -> &'static mut [u64] {
         unsafe { core::slice::from_raw_parts_mut(self.rsi as *mut u64, self.rdx as usize) }
     }
 
@@ -162,7 +162,7 @@ impl FpuContext {
 #[derive(Clone)]
 #[repr(C)]
 pub struct Context {
-    pub(super) frame: InterruptFrame,
+    pub(crate) frame: InterruptFrame,
     pub(super) fpu_context: FpuContext,
     pub(super) has_fpu_context: bool,
 }

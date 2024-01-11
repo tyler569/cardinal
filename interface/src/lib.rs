@@ -15,10 +15,13 @@ pub enum Syscall<'a> {
     Exit(u64),
     Spawn(&'a str, usize),
 
+    Sleep(u64),
+
     DgSocket,
     DgWrite(u64, &'a [u8]),
     DgRead(u64, &'a mut [u8]),
     DgClose(u64),
+    Yield,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

@@ -7,8 +7,10 @@ use crate::println;
 use crate::x86::print_backtrace_from_context;
 use crate::{arch, elf_data};
 use alloc::collections::{BTreeMap, VecDeque};
+use core::cmp::min;
 use core::sync::atomic::{AtomicU64, Ordering};
 use spin::Mutex;
+use cardinal3_interface::SyscallReturn;
 
 pub struct Process {
     context: Context,
@@ -18,6 +20,8 @@ pub struct Process {
     pid: u64,
     sched_in: u64,
     on_cpu: Option<usize>,
+    tasks_to_wake: VecDeque<u64>,
+    yield_context: Option<*mut [u64]>,
 }
 
 // Rust is mad because of the PageTable, but we'll never modify that through this object
@@ -58,10 +62,11 @@ impl Process {
             pid,
             sched_in: 0,
             on_cpu: None,
+            tasks_to_wake: VecDeque::new(),
+            yield_context: None,
         };
 
         ALL.lock().insert(pid, process);
-        // println!("[cpu:{} created pid:{}]", arch::cpu_num(), pid);
         pid
     }
 
@@ -72,6 +77,18 @@ impl Process {
             arch::load_tree(p.vm_root);
             p.on_cpu = Some(arch::cpu_num());
             p.sched_in = PerCpu::ticks();
+            if p.state == ProcessState::Waiting {
+                let Some(yield_context) = p.yield_context else {
+                    panic!("waiting with nowhere to put tasks!");
+                };
+
+                let count = p.drain_tasks_to_wake(unsafe { &mut *yield_context });
+                assert!(count > 0, "process woken up with nothing to do!");
+                p.context.frame.set_syscall_return(SyscallReturn::Complete(0));
+                p.context.frame.set_tasks_to_wake_count(count);
+                p.yield_context = None;
+                p.state = ProcessState::Running;
+            }
             p.context.clone()
         })
         .expect("Tried to load a process that doesn't exist");
@@ -102,9 +119,14 @@ impl Process {
         self.exit_code = Some(code);
     }
 
-    #[allow(dead_code)]
-    pub fn wait(&mut self, _task_id: u64) {
+    pub fn wait(&mut self, frame: &InterruptFrame) {
+        self.yield_context = Some(frame.tasks_to_wake());
         self.state = ProcessState::Waiting;
+    }
+
+    pub fn unwait(&mut self) {
+        self.yield_context = None;
+        self.state = ProcessState::Running;
     }
 
     pub fn vm_root(&self) -> *mut PageTable {
@@ -117,6 +139,16 @@ impl Process {
 
     pub fn set_on_cpu(&mut self, on_cpu: Option<usize>) {
         self.on_cpu = on_cpu;
+    }
+
+    pub fn drain_tasks_to_wake(&mut self, tasks: &mut [u64]) -> usize {
+        let len = tasks.len();
+        let count = min(len, self.tasks_to_wake.len());
+        for (entry, task_id) in tasks.iter_mut().zip(self.tasks_to_wake.drain(..count)) {
+            *entry = task_id;
+        }
+
+        count
     }
 }
 
@@ -174,7 +206,7 @@ pub fn spawn(_name: &str, arg: usize) -> u64 {
     }
 }
 
-pub fn with<T, F: FnOnce(&mut Process) -> T>(pid: u64, func: F) -> Option<T> {
+pub fn with<T, F: FnMut(&mut Process) -> T>(pid: u64, func: F) -> Option<T> {
     ALL.lock().get_mut(&pid).map(func)
 }
 
@@ -192,4 +224,11 @@ pub fn backtrace_local() {
 
 pub fn backtrace_all() {
     submit_ipi_to_all_cpus(|| backtrace_local());
+}
+
+pub fn schedule_wakeup(pid: u64, task_id: u64) {
+    with(pid, |proc| {
+        proc.tasks_to_wake.push_back(task_id);
+        schedule_pid(pid);
+    });
 }

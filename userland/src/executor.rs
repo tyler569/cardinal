@@ -1,4 +1,3 @@
-use crate::syscall;
 use crate::syscall::syscall_future;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, VecDeque};
@@ -51,6 +50,19 @@ impl Executor {
             }
         }
     }
+
+    pub fn dispatch_syscall(&mut self, task_id: u64, args: &Syscall) -> SyscallReturn {
+        let mut tasks_to_poll = [0u64; 32];
+        let (result, wake_count) = syscall_future(args, task_id, &mut tasks_to_poll);
+        for task_id in &tasks_to_poll[0..wake_count] {
+            self.tasks_to_poll.push_back(*task_id);
+        }
+        result
+    }
+
+    pub fn backoff(&mut self) {
+        self.dispatch_syscall(0, &Syscall::Yield);
+    }
 }
 
 struct SyscallFuture<'a> {
@@ -61,12 +73,10 @@ impl Future for SyscallFuture<'_> {
     type Output = SyscallReturn;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let mut tasks_to_poll = [0u64; 32];
         let task_id = unsafe { &*(cx.waker().as_raw().data() as *const WakerData) }.task_id;
-        let (result, wake_count) = syscall_future(&self.syscall_args, task_id, &mut tasks_to_poll);
-        for task_id in &tasks_to_poll[..wake_count] {
-            unsafe { EXECUTOR.tasks_to_poll.push_back(*task_id) };
-        }
+
+        let result = unsafe { EXECUTOR.dispatch_syscall(task_id, &self.syscall_args) };
+
         match result {
             SyscallReturn::Complete(_) => Poll::Ready(result),
             SyscallReturn::NotComplete => Poll::Pending,
@@ -114,18 +124,24 @@ fn new_waker(task_id: u64) -> Waker {
     unsafe { Waker::from_raw(raw_waker) }
 }
 
-pub unsafe fn spawn(p0: impl Future<Output = ()> + Sized + 'static) {
-    EXECUTOR.spawn(p0);
+pub unsafe fn spawn(task: impl Future<Output = ()> + Sized + 'static) {
+    EXECUTOR.spawn(task);
 }
 
 pub unsafe fn run() {
     loop {
-        syscall::print("executor looping\n");
+        // syscall::print("executor looping\n");
         EXECUTOR.do_work();
 
         // if task 1 ended, we're done
-        if let None = EXECUTOR.tasks.get(&1) {
+        if EXECUTOR.tasks.get(&1).is_none() {
             break;
         }
+
+        EXECUTOR.backoff();
     }
+}
+
+pub fn dispatch_syscall(args: &Syscall) -> SyscallReturn {
+    unsafe { EXECUTOR.dispatch_syscall(0, args) }
 }

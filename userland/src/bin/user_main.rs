@@ -18,5 +18,6 @@ fn cardinal_main(_arg: usize) {
 
 async fn main() {
     executor::syscall(Syscall::Print("Hello world from async 1!\n")).await;
+    executor::syscall(Syscall::Sleep(1_000_000)).await;
     executor::syscall(Syscall::Print("Hello world from async 2!\n")).await;
 }

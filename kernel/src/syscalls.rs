@@ -1,15 +1,17 @@
+use core::time::Duration;
 use crate::net::{socket, Socket};
 use crate::per_cpu::PerCpu;
 use crate::print::print;
 use crate::println;
 use crate::{arch, process};
 use cardinal3_interface::{Error, Syscall, SyscallReturn};
+use crate::executor::sleep::sleep;
 
 pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
     let syscall = frame.syscall_info();
-    let _task_id = frame.task_id();
-    let _tasks_to_wake = frame.tasks_to_wake();
-    let pid = PerCpu::running().unwrap_or(0);
+    let task_id = frame.task_id();
+    let tasks_to_wake = frame.tasks_to_wake();
+    let pid = PerCpu::running().expect("syscall without running process!");
 
     match syscall {
         Syscall::Print(arg) => print!("{}", arg),
@@ -32,9 +34,31 @@ pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
         Syscall::DgSocket => SyscallReturn::Complete(Socket::new()),
         Syscall::DgRead(sn, buf) => socket::read(*sn, buf),
         Syscall::DgWrite(sn, buf) => socket::write(*sn, buf),
+        &Syscall::Sleep(usec) => {
+            PerCpu::executor_mut().spawn(async move {
+                sleep(Duration::from_micros(usec)).await;
+                process::schedule_wakeup(pid, task_id);
+            });
+            SyscallReturn::NotComplete
+        }
+        Syscall::Yield => {
+            process::with(pid, |proc| {
+                proc.wait(frame);
+            });
+            SyscallReturn::Complete(0)
+        }
         _ => SyscallReturn::Error(Error::InvalidSyscall),
     };
 
+    let count = process::with(pid, |proc| {
+        let count = proc.drain_tasks_to_wake(tasks_to_wake);
+        if count > 0 {
+            // in case this was a call to Yield and we already have work to do
+            proc.unwait();
+        }
+        count
+    }).unwrap();
+
     frame.set_syscall_return(result);
-    frame.set_tasks_to_wake_count(0);
+    frame.set_tasks_to_wake_count(count);
 }

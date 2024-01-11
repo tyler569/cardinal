@@ -1,6 +1,7 @@
 use cardinal3_interface::{Error, Syscall, SyscallReturn};
 use core::arch::asm;
 use num_traits::FromPrimitive;
+use crate::executor;
 
 pub(crate) fn syscall_future(
     args: &Syscall,
@@ -31,15 +32,11 @@ pub(crate) fn syscall_future(
     )
 }
 
-pub fn syscall_simple(args: &Syscall) -> SyscallReturn {
-    syscall_future(args, 0, &mut [0; 0]).0
-}
-
 pub fn print(string: impl AsRef<str>) {
-    syscall_simple(&Syscall::Print(string.as_ref()));
+    executor::dispatch_syscall(&Syscall::Print(string.as_ref()));
 }
 
 pub fn exit(code: u64) -> ! {
-    syscall_simple(&Syscall::Exit(code));
+    executor::dispatch_syscall(&Syscall::Exit(code));
     unreachable!();
 }
