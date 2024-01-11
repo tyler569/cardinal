@@ -71,6 +71,8 @@ unsafe extern "C" fn kernel_main() -> ! {
                 b's' => load_and_start_usermode_program(0),
                 b'm' => pmm::summary(),
                 b'p' => process::backtrace_all(),
+                b'b' => arch::breakpoint(),
+                b'B' => executor::spawn(async { arch::breakpoint() }),
                 _ => {}
             }
             print!("{}", c as char);

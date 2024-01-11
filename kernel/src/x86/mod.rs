@@ -75,6 +75,11 @@ pub unsafe fn early_cpu_init() {
     lapic::start_timer();
 }
 
+#[inline(always)]
+pub fn breakpoint() {
+    unsafe { asm!("int3") };
+}
+
 pub fn direct_map_offset(phy: u64) -> usize {
     phy as usize + *DIRECT_MAP_OFFSET
 }
@@ -146,6 +151,7 @@ unsafe fn acpi_debug() {
     }
 }
 
+#[allow(unused)]
 pub fn print_backtrace() {
     let bp: usize;
     unsafe {

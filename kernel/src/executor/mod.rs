@@ -42,8 +42,10 @@ impl Executor {
 
     pub fn do_work(&mut self) {
         assert!(arch::interrupts_are_disabled());
-        let mut tasks_to_poll = self.tasks_to_poll.lock();
-        while let Some(id) = tasks_to_poll.pop_front() {
+        loop {
+            let Some(id) = self.tasks_to_poll.lock().pop_front() else {
+                break;
+            };
             let task = self.tasks.get_mut(&id).unwrap();
             let waker = new_waker(id);
             let mut context = Context::from_waker(&waker);
