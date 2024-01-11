@@ -22,6 +22,7 @@ done
 < last_output \
     grep '(.*) <.*>' | \
     sed 's/.*(\(.*\)).*/\1/g' | \
-    xargs llvm-addr2line -fips -e "$file_name" | \
+    grep -v -e '^0x0$' -e '^0$' | \
+    xargs llvm-addr2line -fipsae "$file_name" | \
     rustfilt
 
