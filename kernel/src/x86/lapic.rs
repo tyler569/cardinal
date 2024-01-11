@@ -1,8 +1,11 @@
+use spin::Lazy;
 use crate::print::println;
-use crate::x86::cpu;
+use crate::x86::{cpu, direct_map_offset};
 
-pub const DEFAULT_ADDRESS: usize = 0xfee0_0000;
-pub const MAPPED_ADDRESS: *mut u32 = (DEFAULT_ADDRESS + 0xFFFF_8000_0000_0000) as *mut u32;
+pub const DEFAULT_ADDRESS: u64 = 0xfee0_0000;
+pub static MAPPED_ADDRESS: Lazy<usize> = Lazy::new(|| {
+    direct_map_offset(DEFAULT_ADDRESS)
+});
 
 unsafe fn relocate() {
     cpu::wrmsr(cpu::IA32_LAPIC_BASE, DEFAULT_ADDRESS as u64 | 1 << 11);
@@ -16,12 +19,12 @@ pub fn init() {
 }
 
 pub unsafe fn read(offset: isize) -> u32 {
-    let ptr = MAPPED_ADDRESS.byte_offset(offset);
+    let ptr = (MAPPED_ADDRESS.clone() as *mut u32).byte_offset(offset);
     ptr.read_volatile()
 }
 
 pub unsafe fn write(offset: isize, value: u32) {
-    let ptr = MAPPED_ADDRESS.byte_offset(offset);
+    let ptr = (MAPPED_ADDRESS.clone() as *mut u32).byte_offset(offset);
     ptr.write_volatile(value);
 }
 
