@@ -3,8 +3,9 @@
 set -euo pipefail
 
 file_name="build/cardinal3"
+rustfilt="rustfilt"
 
-while getopts "f:u" opt; do
+while getopts "f:un" opt; do
   case $opt in
     f)
       file_name="$OPTARG"
@@ -12,10 +13,13 @@ while getopts "f:u" opt; do
     u)
       file_name="build/userland"
       ;;
+    n)
+      rustfilt="cat"
+      ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
       ;;
   esac
 done
 
-llvm-objdump -d $file_name | rustfilt | less
+llvm-objdump -dS $file_name 2>/dev/null | $rustfilt | less
