@@ -2,7 +2,7 @@
 #![no_main]
 
 use cardinal3_interface::Syscall;
-use cardinal3_userland::{executor, print, println, syscall};
+use cardinal3_userland::{executor, println, syscall};
 
 #[no_mangle]
 fn cardinal_main(_arg: usize) {

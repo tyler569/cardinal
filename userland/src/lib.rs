@@ -34,24 +34,16 @@ extern "Rust" {
     fn cardinal_main(arg: usize);
 }
 
-extern "C" {
-    static _GLOBAL_OFFSET_TABLE_: u8;
-}
-
 static mut N: usize = 0;
 
 #[no_mangle]
 pub extern "C" fn _start(arg: usize) {
     static_heap_init();
-    println!(
-        "userland started..., N is {}, got is {:?}",
-        unsafe { N },
-        unsafe { &_GLOBAL_OFFSET_TABLE_ as *const u8 }
-    );
+    println!("userland started..., N is {}", unsafe { N },);
     unsafe {
         cardinal_main(arg);
     }
-    syscall::print("main returned!\n");
+    println!("main returned!");
     syscall::exit(0);
     #[allow(unreachable_code)]
     loop {}

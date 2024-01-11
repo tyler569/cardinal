@@ -19,14 +19,12 @@ pub fn _print(args: core::fmt::Arguments) {
 #[macro_export]
 macro_rules! print {
     () => ();
-    ($($arg:tt)*) => ({
-        $crate::format::_print(format_args!($($arg)*));
-    })
+    ($($arg:tt)*) => ($crate::format::_print(format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! println {
-    () => ({ print!("\n"); });
-    ($fmt:expr) => ({ print!(concat!($fmt, "\n")); });
-    ($fmt:expr, $($arg:tt)*) => ({ print!(concat!($fmt, "\n"), $($arg)*); });
+    () => ();
+    ($fmt:expr) => ($crate::format::_print(format_args!(concat!($fmt, "\n"))));
+    ($fmt:expr, $($arg:tt)*) => ($crate::format::_print(format_args!(concat!($fmt, "\n"), $($arg)*)));
 }
