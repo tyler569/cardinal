@@ -58,6 +58,12 @@ bitflags! {
     }
 }
 
+pub const DEFAULT_FLAGS: X86Flags = if crate::SINGLE_STEP {
+    X86Flags::INTERRUPT | X86Flags::TRAP
+} else {
+    X86Flags::INTERRUPT
+};
+
 impl InterruptFrame {
     pub fn new_user(ip: usize) -> Self {
         assert_ne!(ip, 0, "trying to create context to 0!");
@@ -65,7 +71,7 @@ impl InterruptFrame {
             r12: 0x1234,
             ip: ip as u64,
             cs: 0x1b,
-            flags: X86Flags::INTERRUPT.bits(),
+            flags: DEFAULT_FLAGS.bits(),
             ss: 0x23,
             user_sp: x86::USER_STACK_TOP as u64,
             ..Default::default()

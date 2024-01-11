@@ -11,7 +11,7 @@ pub struct TaskId(pub u64);
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Syscall<'a> {
-    Println(&'a str),
+    Print(&'a str),
     Exit(u64),
     Spawn(&'a str, usize),
 

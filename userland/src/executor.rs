@@ -120,8 +120,8 @@ pub unsafe fn spawn(p0: impl Future<Output = ()> + Sized + 'static) {
 
 pub unsafe fn run() {
     loop {
+        syscall::print("executor looping\n");
         EXECUTOR.do_work();
-        syscall::println("stuff.com");
 
         // if task 1 ended, we're done
         if let None = EXECUTOR.tasks.get(&1) {

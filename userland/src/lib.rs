@@ -8,10 +8,8 @@ extern crate alloc;
 pub use cardinal3_allocator as allocator;
 
 pub mod executor;
-mod format;
+pub mod format;
 pub mod syscall;
-
-pub(crate) use format::{format, print};
 
 #[global_allocator]
 static ALLOCATOR: allocator::linky::LockedAllocator = allocator::linky::new();
@@ -36,16 +34,20 @@ extern "Rust" {
     fn cardinal_main(arg: usize);
 }
 
+extern "C" {
+    static _GLOBAL_OFFSET_TABLE_: u8;
+}
+
 static mut N: usize = 0;
 
 #[no_mangle]
 pub extern "C" fn _start(arg: usize) {
     static_heap_init();
-    print!("userland started..., N is {}", unsafe { N });
+    println!("userland started..., N is {}, got is {:?}", unsafe { N }, unsafe { &_GLOBAL_OFFSET_TABLE_ as *const u8});
     unsafe {
         cardinal_main(arg);
     }
-    syscall::println("main returned!");
+    syscall::print("main returned!\n");
     syscall::exit(0);
     #[allow(unreachable_code)]
     loop {}

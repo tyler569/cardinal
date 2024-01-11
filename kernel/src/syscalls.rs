@@ -3,6 +3,7 @@ use crate::per_cpu::PerCpu;
 use crate::println;
 use crate::{arch, process};
 use cardinal3_interface::{Error, Syscall, SyscallReturn};
+use crate::print::print;
 
 pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
     let syscall = frame.syscall_info();
@@ -10,16 +11,20 @@ pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
     let _tasks_to_wake = frame.tasks_to_wake();
     let pid = PerCpu::running().unwrap_or(0);
 
-    println!(
-        "[cpu:{} pid:{} syscall:{:?} tsc:{}]",
-        arch::cpu_num(),
-        pid,
-        syscall,
-        arch::rdtsc(),
-    );
+    match syscall {
+        Syscall::Print(arg) => print!("{}", arg),
+        _ =>
+            println!(
+                "[cpu:{} pid:{} syscall:{:?} tsc:{}]",
+                arch::cpu_num(),
+                pid,
+                syscall,
+                arch::rdtsc(),
+            ),
+    }
 
     let result = match syscall {
-        Syscall::Println(_) => SyscallReturn::Complete(0),
+        Syscall::Print(_) => SyscallReturn::Complete(0),
         Syscall::Exit(code) => {
             process::exit(*code);
             SyscallReturn::Complete(0)

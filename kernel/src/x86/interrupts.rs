@@ -23,7 +23,7 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     let from_usermode = frame.cs & 0x03 == 0x03;
 
     match frame.interrupt_number {
-        1 => handle_breakpoint(frame),
+        1 => handle_debug(frame),
         3 => handle_breakpoint(frame),
         14 => handle_page_fault(frame),
         32..=47 => handle_irq(frame),
@@ -73,9 +73,13 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     assert_ne!(frame.ip, 0, "Returning from interrupt to IP 0");
 }
 
-fn handle_breakpoint(frame: &mut InterruptFrame) {
+fn handle_breakpoint(frame: &InterruptFrame) {
     println!("break point");
     println!("{}", frame);
+}
+
+fn handle_debug(frame: &InterruptFrame) {
+    println!("step ip: {:x}", frame.ip);
 }
 
 fn handle_page_fault(frame: &InterruptFrame) {

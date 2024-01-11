@@ -1,16 +1,32 @@
-macro_rules! format {
-    ($($arg:tt)*) => ({
-        let mut s = alloc::string::String::new();
-        core::fmt::write(&mut s, format_args!($($arg)*)).unwrap();
-        s
-    })
+use core::fmt::Write;
+use crate::syscall;
+
+pub struct SyscallPrint;
+
+impl Write for SyscallPrint {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        syscall::print(s);
+        Ok(())
+    }
 }
 
+pub fn _print(args: core::fmt::Arguments) {
+    let _ = SyscallPrint.write_fmt(args).map_err(|err| {
+        panic!("print error: {}", err);
+    });
+}
+
+#[macro_export]
 macro_rules! print {
+    () => ();
     ($($arg:tt)*) => ({
-        let s = format!($($arg)*);
-        $crate::syscall::println(&s);
+        $crate::format::_print(format_args!($($arg)*));
     })
 }
 
-pub(crate) use {format, print};
+#[macro_export]
+macro_rules! println {
+    () => ({ print!("\n"); });
+    ($fmt:expr) => ({ print!(concat!($fmt, "\n")); });
+    ($fmt:expr, $($arg:tt)*) => ({ print!(concat!($fmt, "\n"), $($arg)*); });
+}
