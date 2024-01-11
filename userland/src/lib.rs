@@ -5,11 +5,13 @@
 
 extern crate alloc;
 
-use alloc::string::ToString;
 pub use cardinal3_allocator as allocator;
 
 pub mod executor;
+mod format;
 pub mod syscall;
+
+pub(crate) use format::{format, print};
 
 #[global_allocator]
 static ALLOCATOR: allocator::linky::LockedAllocator = allocator::linky::new();
@@ -22,11 +24,12 @@ pub fn static_heap_init() {
 
 #[panic_handler]
 fn panic(panic_info: &core::panic::PanicInfo) -> ! {
-    syscall::println("user panic!");
-    syscall::println(panic_info.to_string().as_str());
+    print!("user panic: {}", panic_info);
     syscall::exit(1);
     #[allow(unreachable_code)]
-    loop {}
+    loop {
+        print!("process returned to after panicking!");
+    }
 }
 
 extern "Rust" {
@@ -37,11 +40,8 @@ static mut N: usize = 0;
 
 #[no_mangle]
 pub extern "C" fn _start(arg: usize) {
-    unsafe { N += 1 };
-    syscall::println("userland starting...");
-    assert_eq!(unsafe { N }, 1, "userland does not have clean bss pages!");
     static_heap_init();
-    syscall::println("userland started!");
+    print!("userland started..., N is {}", unsafe { N });
     unsafe {
         cardinal_main(arg);
     }
