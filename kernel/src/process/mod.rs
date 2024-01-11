@@ -1,3 +1,5 @@
+mod map;
+
 use crate::arch::{Context, InterruptFrame, PageTable};
 use crate::per_cpu::PerCpu;
 use crate::vmm::PageFlags;
@@ -43,62 +45,9 @@ pub enum ProcessDisposition {
 
 impl Process {
     pub unsafe fn new(elf_data: &'static [u8], arg: usize) -> u64 {
-        let efile = elf::ElfBytes::<LittleEndian>::minimal_parse(elf_data).unwrap();
         let vm_root = arch::new_tree();
+        let efile = map::map_elf_into_address_space(elf_data, vm_root);
         let mut context = Context::new_user(efile.ehdr.e_entry as usize);
-        let base = elf_data.as_ptr() as usize;
-
-        for ph in efile.segments().unwrap() {
-            if ph.p_type == elf::abi::PT_LOAD {
-                let mut flags: PageFlags = PageFlags::READ | PageFlags::USER;
-                if ph.p_flags & elf::abi::PF_W != 0 {
-                    flags |= PageFlags::WRITE;
-
-                    for i in 0..((ph.p_memsz as usize).next_multiple_of(0x1000) / 0x1000) {
-                        let offset = i * 0x1000;
-                        let page_vma = base + ph.p_offset as usize + offset;
-                        let page_phy = pmm::alloc().unwrap();
-                        let hhdm_vma = arch::direct_map_offset(page_phy);
-                        let mapped_vma = ph.p_vaddr as usize + offset;
-
-                        let copy_len = core::cmp::min(0x1000, (ph.p_filesz as usize).saturating_sub(offset));
-                        let zero_len = 0x1000 - copy_len;
-
-                        if copy_len > 0 {
-                            core::ptr::copy_nonoverlapping(page_vma as *const u8, hhdm_vma as *mut u8, copy_len);
-                        }
-                        if zero_len > 0 {
-                            core::ptr::write_bytes((hhdm_vma + copy_len) as *mut u8, 0, zero_len);
-                        }
-
-                        arch::map_in_table(vm_root, mapped_vma, page_phy, flags);
-                    }
-                } else {
-                    if ph.p_flags & elf::abi::PF_X != 0 {
-                        flags |= PageFlags::EXECUTE;
-                    }
-                    let bottom_of_range = ph.p_vaddr as usize & !arch::PAGE_MASK;
-                    let top_of_range = ((ph.p_vaddr + ph.p_memsz) as usize).next_multiple_of(arch::PAGE_SIZE);
-                    let number_of_pages = (top_of_range - bottom_of_range) as usize / arch::PAGE_SIZE;
-                    for i in 0..number_of_pages {
-                        let page_vma = base + ph.p_offset as usize + i * arch::PAGE_SIZE;
-                        let page_phy = arch::physical_address(page_vma).unwrap() & !arch::PAGE_MASK as u64;
-                        let mapped_vma = (ph.p_vaddr as usize + i * 0x1000) & !arch::PAGE_MASK;
-
-                        arch::map_in_table(vm_root, mapped_vma, page_phy, flags);
-                    }
-                }
-            }
-        }
-
-        for i in 0..arch::USER_STACK_PAGES {
-            arch::map_in_table(
-                vm_root,
-                arch::USER_STACK_BASE + arch::PAGE_SIZE * i,
-                pmm::alloc().unwrap(),
-                PageFlags::READ | PageFlags::WRITE | PageFlags::USER,
-            )
-        }
 
         context.set_arg1(arg as u64);
 

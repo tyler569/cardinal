@@ -2,5 +2,4 @@
 rustflags = [
     "-C", "force-frame-pointers=true",
     "-C", "symbol-mangling-version=v0",
-    "-C", "relocation-model=static",
 ]

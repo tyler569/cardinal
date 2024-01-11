@@ -171,17 +171,7 @@ pub fn print_backtrace_from(mut bp: usize) {
 
     while bp != 0 {
         let ip = unsafe { *(bp as *const usize).offset(1) };
-        if ip <= 0x7fff_ffff_ffff {
-            if let Some(pid) = pid {
-                process::with(pid, |proc| {
-                    println!("({:x}) <{}>", ip, proc.get_symbol_name(ip).unwrap());
-                });
-            } else {
-                println!("({:x}) <>", ip);
-            }
-        } else {
-            println!("({:x}) <>", ip);
-        }
+        println!("({:#x}) <>", ip);
         bp = unsafe { *(bp as *const usize) };
 
         if physical_address(bp).is_none() || physical_address(bp + 8).is_none() {
@@ -192,7 +182,7 @@ pub fn print_backtrace_from(mut bp: usize) {
 }
 
 pub fn print_backtrace_from_with_ip(ip: usize, bp: usize) {
-    println!("({:x}) <>", ip);
+    println!("({:#x}) <>", ip);
     print_backtrace_from(bp);
 }
 
