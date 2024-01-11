@@ -31,8 +31,8 @@ pub fn syscall_simple(args: &Syscall) -> SyscallReturn {
     syscall_future(args, 0, &mut [0; 0]).0
 }
 
-pub fn println(string: &str) {
-    syscall_simple(&Syscall::Println(string));
+pub fn println(string: impl AsRef<str>) {
+    syscall_simple(&Syscall::Println(string.as_ref()));
 }
 
 pub fn exit(code: u64) -> ! {
