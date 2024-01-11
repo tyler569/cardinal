@@ -34,6 +34,7 @@ use print::{print, println};
 use x86 as arch;
 
 pub const NUM_CPUS: usize = 16;
+pub const START_PROCS: usize = 1;
 
 #[no_mangle]
 pub unsafe extern "C" fn kernel_init() -> ! {
@@ -90,7 +91,7 @@ unsafe extern "C" fn kernel_main() -> ! {
     //     ]);
     // }
 
-    for _ in 0..1 {
+    for _ in 0..START_PROCS {
         load_and_start_usermode_program(0);
     }
 

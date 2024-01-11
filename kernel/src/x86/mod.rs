@@ -175,3 +175,7 @@ pub fn print_backtrace_from_with_ip(ip: usize, bp: usize) {
 pub fn print_backtrace_from_context(context: &Context) {
     print_backtrace_from_with_ip(context.frame.ip as usize, context.frame.rbp as usize);
 }
+
+pub fn print_backtrace_from_frame(frame: &InterruptFrame) {
+    print_backtrace_from_with_ip(frame.ip as usize, frame.rbp as usize);
+}

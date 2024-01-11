@@ -3,7 +3,7 @@ use crate::println;
 use crate::process::ProcessDisposition;
 use crate::x86::context::InterruptFrame;
 use crate::x86::cpu::cpu_num;
-use crate::x86::{cpu, lapic, sleep_forever_no_irq, SERIAL};
+use crate::x86::{cpu, lapic, sleep_forever_no_irq, SERIAL, print_backtrace_from_frame};
 use crate::{arch, executor, process, syscalls};
 use core::arch::asm;
 use core::sync::atomic::{AtomicU64, Ordering};
@@ -74,13 +74,13 @@ fn handle_breakpoint(frame: &mut InterruptFrame) {
     println!("{}", frame);
 }
 
-fn handle_page_fault(frame: &mut InterruptFrame) {
-    report_page_fault(frame.error_code, cpu::cr2());
+fn handle_page_fault(frame: &InterruptFrame) {
+    report_page_fault(frame, frame.error_code, cpu::cr2());
     println!("{}", frame);
     panic!();
 }
 
-fn report_page_fault(error_code: u64, _fault_addr: u64) {
+fn report_page_fault(frame: &InterruptFrame, error_code: u64, _fault_addr: u64) {
     if error_code & !0x1F != 0 {
         println!(
             "page fault caused by unknown condition (code: {:#x})",
@@ -120,7 +120,12 @@ fn report_page_fault(error_code: u64, _fault_addr: u64) {
         cpu::cr2(),
         reason,
         mode
-    )
+    );
+
+    if typ == "instruction" {
+        println!("jump to unmapped memory came from");
+        print_backtrace_from_frame(frame);
+    }
 }
 
 fn handle_irq(frame: &mut InterruptFrame) {
@@ -135,12 +140,12 @@ fn handle_irq(frame: &mut InterruptFrame) {
     lapic::eoi();
 }
 
-fn handle_timer(_frame: &mut InterruptFrame) {
+fn handle_timer(_frame: &InterruptFrame) {
     PerCpu::timer_mut().tick();
     PerCpu::executor_mut().do_work();
 }
 
-fn handle_serial(_frame: &mut InterruptFrame) {
+fn handle_serial(_frame: &InterruptFrame) {
     unsafe { SERIAL.handle_interrupt() };
 }
 
@@ -148,14 +153,14 @@ fn handle_syscall(frame: &mut InterruptFrame) {
     syscalls::handle_syscall(frame);
 }
 
-fn handle_ipi(_frame: &mut InterruptFrame) {
+fn handle_ipi(_frame: &InterruptFrame) {
     handle_ipi_irq();
 
     lapic::eoi();
 }
 
-fn handle_ipi_panic(_frame: &mut InterruptFrame) {
-    println!("CPU {} stopping due to panic on another CPU", cpu_num());
+fn handle_ipi_panic(_frame: &InterruptFrame) {
+    // println!("CPU {} stopping due to panic on another CPU", cpu_num());
     sleep_forever_no_irq();
 }
 

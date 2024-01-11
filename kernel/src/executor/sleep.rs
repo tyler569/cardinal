@@ -12,7 +12,6 @@ struct Sleep {
 
 impl Sleep {
     fn new(duration: core::time::Duration) -> Self {
-        // println!("[async] new sleep");
         Self {
             until: PerCpu::ticks() + timer::ticks_for(duration),
         }
@@ -24,10 +23,8 @@ impl Future for Sleep {
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if PerCpu::ticks() > self.until {
-            // println!("[async] sleep done");
             Poll::Ready(())
         } else {
-            // println!("[async] sleep not done");
             let waker = cx.waker().clone();
             timer::insert_at(self.until, move || waker.wake_by_ref());
             Poll::Pending
