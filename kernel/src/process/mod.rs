@@ -54,7 +54,7 @@ impl Process {
                 if ph.p_flags & elf::abi::PF_W != 0 {
                     flags |= PageFlags::WRITE;
 
-                    for i in 0..(ph.p_memsz as usize + 0xfff) / 0x1000 {
+                    for i in 0..((ph.p_memsz as usize).next_multiple_of(0x1000) / 0x1000) {
                         let offset = i * 0x1000;
                         let page_vma = base + ph.p_offset as usize + offset;
                         let page_phy = pmm::alloc().unwrap();
@@ -77,7 +77,7 @@ impl Process {
                     if ph.p_flags & elf::abi::PF_X != 0 {
                         flags |= PageFlags::EXECUTE;
                     }
-                    for i in 0..(ph.p_memsz as usize + 0xfff) / 0x1000 {
+                    for i in 0..((ph.p_memsz as usize).next_multiple_of(0x1000) / 0x1000) {
                         let page_vma = base + ph.p_offset as usize + i * 0x1000;
                         let page_phy = arch::physical_address(page_vma).unwrap() & !0xfff;
                         let mapped_vma = (ph.p_vaddr as usize + i * 0x1000) & !0xfff;
@@ -88,17 +88,10 @@ impl Process {
             }
         }
 
-        arch::map_in_table(
-            vm_root,
-            0x7FFF_FEFF_F000,
-            pmm::alloc().unwrap(),
-            PageFlags::READ | PageFlags::WRITE | PageFlags::USER,
-        );
-
-        for i in 0..16 {
+        for i in 0..arch::USER_STACK_PAGES {
             arch::map_in_table(
                 vm_root,
-                0x7FFF_FFF0_0000 + 0x1000 * i,
+                arch::USER_STACK_BASE + arch::PAGE_SIZE * i,
                 pmm::alloc().unwrap(),
                 PageFlags::READ | PageFlags::WRITE | PageFlags::USER,
             )

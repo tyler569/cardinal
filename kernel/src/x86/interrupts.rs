@@ -122,10 +122,8 @@ fn report_page_fault(frame: &InterruptFrame, error_code: u64, _fault_addr: u64) 
         mode
     );
 
-    if typ == "instruction" {
-        println!("jump to unmapped memory came from");
-        print_backtrace_from_frame(frame);
-    }
+    println!("access came from here:");
+    print_backtrace_from_frame(frame);
 }
 
 fn handle_irq(frame: &mut InterruptFrame) {

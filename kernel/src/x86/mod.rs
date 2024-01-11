@@ -31,7 +31,11 @@ static DIRECT_MAP_OFFSET: Lazy<usize> =
     Lazy::new(|| unsafe { (**limine::HHDM.response.get()).offset } as usize);
 static SYSTEM_INIT_DONE: AtomicBool = AtomicBool::new(false);
 
-pub const USER_STACK_TOP: usize = 0x0000_7fff_ff00_0000;
+pub const PAGE_SIZE: usize = 0x1000;
+
+pub const USER_STACK_BASE: usize = 0x0000_7fff_ff00_0000;
+pub const USER_STACK_PAGES: usize = 16;
+pub const USER_STACK_TOP: usize = USER_STACK_BASE + USER_STACK_PAGES * PAGE_SIZE;
 
 pub fn early_system_init() {
     if SYSTEM_INIT_DONE
