@@ -4,6 +4,7 @@ use crate::x86;
 use core::arch::asm;
 use core::fmt::Debug;
 use core::fmt::Formatter;
+use bitflags::bitflags;
 use cardinal3_interface::SyscallReturn;
 
 #[repr(C)]
@@ -34,6 +35,29 @@ pub struct InterruptFrame {
     pub(super) ss: u64,
 }
 
+bitflags! {
+    pub struct X86Flags: u64 {
+        const CARRY = 1 << 0;
+        const PARITY = 1 << 2;
+        const ADJUST = 1 << 4;
+        const ZERO = 1 << 6;
+        const SIGN = 1 << 7;
+        const TRAP = 1 << 8;
+        const INTERRUPT = 1 << 9;
+        const DIRECTION = 1 << 10;
+        const OVERFLOW = 1 << 11;
+        const IOPL0 = 1 << 12;
+        const IOPL1 = 1 << 13;
+        const NESTED_TASK = 1 << 14;
+        const RESUME = 1 << 16;
+        const VIRTUAL_8086 = 1 << 17;
+        const ALIGNMENT_CHECK = 1 << 18;
+        const VIRTUAL_INTERRUPT = 1 << 19;
+        const VIRTUAL_INTERRUPT_PENDING = 1 << 20;
+        const ID = 1 << 21;
+    }
+}
+
 impl InterruptFrame {
     pub fn new_user(ip: usize) -> Self {
         assert_ne!(ip, 0, "trying to create context to 0!");
@@ -41,7 +65,7 @@ impl InterruptFrame {
             r12: 0x1234,
             ip: ip as u64,
             cs: 0x1b,
-            flags: 0x200,
+            flags: (X86Flags::INTERRUPT).bits(),
             ss: 0x23,
             user_sp: x86::USER_STACK_TOP as u64,
             ..Default::default()

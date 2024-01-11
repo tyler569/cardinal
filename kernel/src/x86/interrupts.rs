@@ -23,6 +23,7 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
     let from_usermode = frame.cs & 0x03 == 0x03;
 
     match (*frame).interrupt_number {
+        1 => handle_breakpoint(frame),
         3 => handle_breakpoint(frame),
         14 => handle_page_fault(frame),
         32..=47 => handle_irq(frame),
