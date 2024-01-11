@@ -76,8 +76,7 @@ fn handle_breakpoint(frame: &mut InterruptFrame) {
 
 fn handle_page_fault(frame: &InterruptFrame) {
     report_page_fault(frame, frame.error_code, cpu::cr2());
-    println!("{}", frame);
-    panic!();
+    panic!("Unhandled page fault\n{}", frame);
 }
 
 fn report_page_fault(frame: &InterruptFrame, error_code: u64, _fault_addr: u64) {
@@ -170,8 +169,7 @@ fn unexpected_interrupt(frame: &InterruptFrame) {
         cpu_num(),
         INTERRUPT_INFO[frame.interrupt_number as usize].name
     );
-    println!("{}", frame);
-    panic!();
+    panic!("Unhandled unexpected interrupt {:x} ({})\n{}", frame.interrupt_number, frame.interrupt_number, frame);
 }
 
 #[derive(Debug)]

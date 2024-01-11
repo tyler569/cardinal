@@ -118,10 +118,7 @@ unsafe fn ap_main() -> ! {
 fn panic(info: &core::panic::PanicInfo) -> ! {
     arch::broadcast_ipi(130);
 
-    let pid = PerCpu::running();
-
-    println!("CPU {} pid: {:?} PANIC: {}", arch::cpu_num(), pid, info);
-    arch::print_backtrace();
+    println!("PANIC: {}", info);
 
     arch::sleep_forever_no_irq()
 }

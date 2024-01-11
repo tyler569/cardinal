@@ -85,32 +85,32 @@ impl InterruptFrame {
 
 impl core::fmt::Display for InterruptFrame {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "frame at {:p}, cpu {}, pid {:?}", self, cpu_num(), PerCpu::running())?;
         writeln!(
             f,
-            "ax {:016x} bx {:016x} cx {:016x} dx {:016x}",
+            " ax {:016x} bx {:016x} cx {:016x} dx {:016x}",
             self.rax, self.rbx, self.rcx, self.rdx
         )?;
         writeln!(
             f,
-            "sp {:016x} bp {:016x} si {:016x} di {:016x}",
+            " sp {:016x} bp {:016x} si {:016x} di {:016x}",
             self.user_sp, self.rbp, self.rsi, self.rdi
         )?;
         writeln!(
             f,
-            " 8 {:016x}  9 {:016x} 10 {:016x} 11 {:016x}",
+            "  8 {:016x}  9 {:016x} 10 {:016x} 11 {:016x}",
             self.r8, self.r9, self.r10, self.r11
         )?;
         writeln!(
             f,
-            "12 {:016x} 13 {:016x} 14 {:016x} 15 {:016x}",
+            " 12 {:016x} 13 {:016x} 14 {:016x} 15 {:016x}",
             self.r12, self.r13, self.r14, self.r15
         )?;
-        writeln!(
+        write!(
             f,
-            "ip {:016x} cs {:016x} fl {:016x}",
+            " ip {:016x} cs {:016x} fl {:016x}",
             self.ip, self.cs, self.flags,
         )?;
-        write!(f, "cpu {}  pid {:?}", cpu_num(), PerCpu::running(),)?;
         Ok(())
     }
 }
