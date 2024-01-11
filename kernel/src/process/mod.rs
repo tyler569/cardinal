@@ -10,7 +10,6 @@ use spin::Mutex;
 use crate::ipi::submit_ipi_to_all_cpus;
 use crate::x86::print_backtrace_from_context;
 
-#[derive(Debug)]
 pub struct Process {
     context: Context,
     vm_root: *mut PageTable,
@@ -19,6 +18,7 @@ pub struct Process {
     pid: u64,
     sched_in: u64,
     on_cpu: Option<usize>,
+    elf_file: elf::ElfBytes<'static, LittleEndian>,
 }
 
 // Rust is mad because of the PageTable, but we'll never modify that through this object
@@ -42,7 +42,7 @@ pub enum ProcessDisposition {
 }
 
 impl Process {
-    pub unsafe fn new(elf_data: &[u8], arg: usize) -> u64 {
+    pub unsafe fn new(elf_data: &'static [u8], arg: usize) -> u64 {
         let efile = elf::ElfBytes::<LittleEndian>::minimal_parse(elf_data).unwrap();
         let vm_root = arch::new_tree();
         let mut context = Context::new_user(efile.ehdr.e_entry as usize);
@@ -77,10 +77,13 @@ impl Process {
                     if ph.p_flags & elf::abi::PF_X != 0 {
                         flags |= PageFlags::EXECUTE;
                     }
-                    for i in 0..((ph.p_memsz as usize).next_multiple_of(0x1000) / 0x1000) {
-                        let page_vma = base + ph.p_offset as usize + i * 0x1000;
-                        let page_phy = arch::physical_address(page_vma).unwrap() & !0xfff;
-                        let mapped_vma = (ph.p_vaddr as usize + i * 0x1000) & !0xfff;
+                    let bottom_of_range = ph.p_vaddr as usize & !arch::PAGE_MASK;
+                    let top_of_range = ((ph.p_vaddr + ph.p_memsz) as usize).next_multiple_of(arch::PAGE_SIZE);
+                    let number_of_pages = (top_of_range - bottom_of_range) as usize / arch::PAGE_SIZE;
+                    for i in 0..number_of_pages {
+                        let page_vma = base + ph.p_offset as usize + i * arch::PAGE_SIZE;
+                        let page_phy = arch::physical_address(page_vma).unwrap() & !arch::PAGE_MASK as u64;
+                        let mapped_vma = (ph.p_vaddr as usize + i * 0x1000) & !arch::PAGE_MASK;
 
                         arch::map_in_table(vm_root, mapped_vma, page_phy, flags);
                     }
@@ -109,6 +112,7 @@ impl Process {
             pid,
             sched_in: 0,
             on_cpu: None,
+            elf_file: efile,
         };
 
         ALL.lock().insert(pid, process);
@@ -168,6 +172,24 @@ impl Process {
 
     pub fn set_on_cpu(&mut self, on_cpu: Option<usize>) {
         self.on_cpu = on_cpu;
+    }
+
+    pub fn get_symbol_name(&self, address: usize) -> Option<&'static str> {
+        let (table, strings) = self.elf_file.symbol_table().ok()??;
+        let mut best_match = None;
+        let mut best_match_address = usize::MAX;
+        for symbol in table.iter() {
+            let addr = symbol.st_value as usize;
+            if addr >= address && addr < best_match_address {
+                best_match = Some(symbol);
+                best_match_address = addr;
+            }
+            if addr == address {
+                break;
+            }
+        }
+
+        best_match.map(|sym| strings.get(sym.st_name as usize).unwrap())
     }
 }
 

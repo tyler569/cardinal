@@ -1,4 +1,4 @@
-use crate::limine;
+use crate::{limine, process};
 use crate::pci::PciAddress;
 use crate::print::println;
 use core::arch::asm;
@@ -26,12 +26,14 @@ pub use page::{
     free_tree, load_tree, map_in_table, new_tree, physical_address, PageTable,
 };
 pub use serial::SERIAL;
+use crate::per_cpu::PerCpu;
 
 static DIRECT_MAP_OFFSET: Lazy<usize> =
     Lazy::new(|| unsafe { (**limine::HHDM.response.get()).offset } as usize);
 static SYSTEM_INIT_DONE: AtomicBool = AtomicBool::new(false);
 
 pub const PAGE_SIZE: usize = 0x1000;
+pub const PAGE_MASK: usize = 0xfff;
 
 pub const USER_STACK_BASE: usize = 0x0000_7fff_ff00_0000;
 pub const USER_STACK_PAGES: usize = 16;
@@ -165,9 +167,21 @@ pub fn print_backtrace() {
 }
 
 pub fn print_backtrace_from(mut bp: usize) {
+    let pid = PerCpu::running();
+
     while bp != 0 {
         let ip = unsafe { *(bp as *const usize).offset(1) };
-        println!("({:#x}) <>", ip);
+        if ip <= 0x7fff_ffff_ffff {
+            if let Some(pid) = pid {
+                process::with(pid, |proc| {
+                    println!("({:x}) <{}>", ip, proc.get_symbol_name(ip).unwrap());
+                });
+            } else {
+                println!("({:x}) <>", ip);
+            }
+        } else {
+            println!("({:x}) <>", ip);
+        }
         bp = unsafe { *(bp as *const usize) };
 
         if physical_address(bp).is_none() || physical_address(bp + 8).is_none() {
@@ -178,7 +192,7 @@ pub fn print_backtrace_from(mut bp: usize) {
 }
 
 pub fn print_backtrace_from_with_ip(ip: usize, bp: usize) {
-    println!("({:#x}) <>", ip);
+    println!("({:x}) <>", ip);
     print_backtrace_from(bp);
 }
 
@@ -188,4 +202,8 @@ pub fn print_backtrace_from_context(context: &Context) {
 
 pub fn print_backtrace_from_frame(frame: &InterruptFrame) {
     print_backtrace_from_with_ip(frame.ip as usize, frame.rbp as usize);
+}
+
+pub(crate) fn rdtsc() -> u64 {
+    unsafe { core::arch::x86_64::_rdtsc() }
 }

@@ -44,6 +44,9 @@ unsafe extern "C" fn rs_interrupt_shim(frame: *mut InterruptFrame) {
             p.should_run()
         })
         .expect("Interrupt from usermode with process that no longer exists");
+        // println!("({:#018x}) <>", frame.ip);
+        // print_backtrace_from_frame(frame);
+        // println!("----");
         match should_run {
             ProcessDisposition::MayContinue => {}
             ProcessDisposition::TimesUp => {

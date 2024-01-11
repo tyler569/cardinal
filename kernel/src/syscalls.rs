@@ -11,10 +11,11 @@ pub fn handle_syscall(frame: &mut arch::InterruptFrame) {
     let pid = PerCpu::running().unwrap_or(0);
 
     println!(
-        "[cpu:{} pid:{} syscall:{:?}]",
+        "[cpu:{} pid:{} syscall:{:?} tsc:{}]",
         arch::cpu_num(),
         pid,
-        syscall
+        syscall,
+        arch::rdtsc(),
     );
 
     let result = match syscall {
