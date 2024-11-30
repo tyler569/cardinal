@@ -2,11 +2,9 @@
 #![no_main]
 #![feature(allocator_api)]
 #![feature(const_trait_impl)]
-#![feature(effects)]
 #![feature(int_roundings)]
 #![feature(naked_functions)]
 #![feature(slice_ptr_get)]
-#![feature(slice_ptr_len)]
 
 extern crate alloc;
 
@@ -167,5 +165,3 @@ fn elf_data() -> *const [u8] {
 unsafe fn load_and_start_usermode_program(arg: usize) {
     process::schedule_pid(Process::new(&*elf_data(), arg));
 }
-
-pub const SINGLE_STEP: bool = false;

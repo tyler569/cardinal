@@ -6,10 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitflags = "2.4.0"
-acpi = "4.1.1"
+bitflags = "2.6.0"
+acpi = "5.1.0"
 array-init = "2.1.0"
-elf = { version = "0.7.2", default-features = false }
+elf = { version = "0.7.4", default-features = false }
 spin = "0.9.8"
 
 cardinal3-allocator = { path = "../allocator" }

@@ -1,7 +1,6 @@
 #![no_std]
 #![feature(start)]
 #![feature(linkage)]
-#![feature(waker_getters)]
 
 extern crate alloc;
 

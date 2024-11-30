@@ -1,8 +1,5 @@
 #![no_std]
 
-#[macro_use]
-extern crate num_derive;
-
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TaskId(pub u64);
@@ -32,7 +29,7 @@ pub enum SyscallReturn {
 }
 
 #[repr(u64)]
-#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive, ToPrimitive)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Error {
     InvalidSyscall,
     InvalidArgument,

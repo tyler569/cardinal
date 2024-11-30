@@ -73,7 +73,7 @@ impl Future for SyscallFuture<'_> {
     type Output = SyscallReturn;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let task_id = unsafe { &*(cx.waker().as_raw().data() as *const WakerData) }.task_id;
+        let task_id = unsafe { &*(cx.waker().data() as *const WakerData) }.task_id;
 
         let result = unsafe { EXECUTOR.dispatch_syscall(task_id, &self.syscall_args) };
 

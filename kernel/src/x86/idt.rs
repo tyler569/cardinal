@@ -1,4 +1,4 @@
-use core::arch::asm;
+use core::arch::{asm, naked_asm};
 
 static mut IDT: Idt = Idt::zero();
 
@@ -157,7 +157,7 @@ pub(super) unsafe fn load() {
 #[naked]
 #[no_mangle]
 unsafe extern "C" fn interrupt_shim() {
-    asm!(
+    naked_asm!(
         "push rax",
         "push rbx",
         "push rcx",
@@ -204,7 +204,6 @@ unsafe extern "C" fn interrupt_shim() {
         "pop rax",
         "add rsp, 16",
         "iretq",
-        options(noreturn),
     );
 }
 
@@ -213,11 +212,10 @@ macro_rules! isr_no_error {
         #[naked]
         #[no_mangle]
         unsafe extern "C" fn $name() {
-            asm!(
+            naked_asm!(
                 "push 0",
                 concat!("push ", stringify!($num)),
                 "jmp interrupt_shim",
-                options(noreturn),
             )
         }
     };
@@ -228,10 +226,9 @@ macro_rules! isr_error {
         #[naked]
         #[no_mangle]
         unsafe extern "C" fn $name() {
-            asm!(
+            naked_asm!(
                 concat!("push ", stringify!($num)),
                 "jmp interrupt_shim",
-                options(noreturn),
             )
         }
     };

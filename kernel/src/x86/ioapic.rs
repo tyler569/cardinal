@@ -2,6 +2,7 @@
 // used by this system.
 #![allow(dead_code)]
 
+use alloc::alloc::Allocator;
 use acpi::platform::interrupt::InterruptSourceOverride;
 
 const IOAPIC_BASE: usize = 0xFEC0_0000;
@@ -136,7 +137,7 @@ impl From<&InterruptSourceOverride> for RelocationEntry {
     }
 }
 
-pub unsafe fn init(interrupt_info: &acpi::platform::interrupt::Apic) {
+pub unsafe fn init<A: Allocator>(interrupt_info: &acpi::platform::interrupt::Apic<A>) {
     for gsi in 0..16 {
         let entry = RelocationEntry::new(gsi + 32, 0);
         let (high, low) = entry.into_bits();
@@ -147,7 +148,7 @@ pub unsafe fn init(interrupt_info: &acpi::platform::interrupt::Apic) {
         write(offset + 1, high);
     }
 
-    for iso in &interrupt_info.interrupt_source_overrides {
+    for iso in interrupt_info.interrupt_source_overrides.iter() {
         let gsi = iso.global_system_interrupt;
 
         let entry = RelocationEntry::from(iso);

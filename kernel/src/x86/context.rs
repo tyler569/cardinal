@@ -58,11 +58,7 @@ bitflags! {
     }
 }
 
-pub const DEFAULT_FLAGS: X86Flags = if crate::SINGLE_STEP {
-    X86Flags::INTERRUPT | X86Flags::TRAP
-} else {
-    X86Flags::INTERRUPT
-};
+pub const DEFAULT_FLAGS: X86Flags = X86Flags::INTERRUPT;
 
 impl InterruptFrame {
     pub fn new_user(ip: usize) -> Self {

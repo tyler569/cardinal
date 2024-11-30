@@ -13,7 +13,7 @@ kernel_file="cardinal3"
 mkdir -p build
 build_dir="$(pwd)/build"
 
-cargo -Zunstable-options -Zbuild-std -C userland build
+cargo -Zunstable-options -C userland build
 cp userland/target/x86_64-unknown-none/debug/user_main "$build_dir"/userland
 
 

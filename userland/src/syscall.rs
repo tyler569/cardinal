@@ -1,6 +1,5 @@
-use cardinal3_interface::{Error, Syscall, SyscallReturn};
+use cardinal3_interface::{Syscall, SyscallReturn};
 use core::arch::asm;
-use num_traits::FromPrimitive;
 use crate::executor;
 
 pub(crate) fn syscall_future(
@@ -25,7 +24,7 @@ pub(crate) fn syscall_future(
         match return_type {
             0 => SyscallReturn::Complete(return_value),
             1 => SyscallReturn::NotComplete,
-            2 => SyscallReturn::Error(Error::from_u64(return_value).expect("Invalid error return")),
+            2 => todo!("Syscall error not implemented"),
             _ => panic!("Invalid syscall return"),
         },
         wake_count,
