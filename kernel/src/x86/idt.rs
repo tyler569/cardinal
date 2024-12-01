@@ -1,21 +1,18 @@
 use core::arch::{asm, naked_asm};
 
+const SIZE: usize = 256;
 static mut IDT: Idt = Idt::zero();
 
 #[repr(align(8))]
 struct Idt {
-    table: [IdtEntry; 256],
+    table: [IdtEntry; SIZE],
 }
 
 impl Idt {
     pub const fn zero() -> Self {
         Self {
-            table: [IdtEntry::zero(); 256],
+            table: [IdtEntry::zero(); SIZE],
         }
-    }
-
-    pub fn len(&self) -> usize {
-        self.table.len()
     }
 }
 
@@ -147,8 +144,8 @@ pub(super) unsafe fn system_init() {
 
 pub(super) unsafe fn load() {
     let ptr = IdtPtr {
-        size: (core::mem::size_of::<IdtEntry>() * IDT.len() - 1) as u16,
-        base: &IDT as *const _ as u64,
+        size: (core::mem::size_of::<IdtEntry>() * SIZE - 1) as u16,
+        base: &raw const IDT as u64,
     };
 
     asm!("lidt [{0}]", in(reg) &ptr);

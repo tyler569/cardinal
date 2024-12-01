@@ -1,10 +1,13 @@
 #![no_std]
 #![no_main]
+
 #![feature(allocator_api)]
 #![feature(const_trait_impl)]
 #![feature(int_roundings)]
 #![feature(naked_functions)]
 #![feature(slice_ptr_get)]
+
+#![allow(unused)]
 
 extern crate alloc;
 

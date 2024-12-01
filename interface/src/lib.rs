@@ -1,5 +1,7 @@
 #![no_std]
 
+#[macro_use] mod macros;
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TaskId(pub u64);
@@ -28,10 +30,10 @@ pub enum SyscallReturn {
     NotComplete,
 }
 
-#[repr(u64)]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Error {
-    InvalidSyscall,
-    InvalidArgument,
-    NoSuchSocket,
+try_from_enum! {
+    pub enum Error : u64 {
+        InvalidSyscall,
+        InvalidArgument,
+        NoSuchSocket,
+    }
 }
