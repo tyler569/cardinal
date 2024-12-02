@@ -74,8 +74,8 @@ impl InterruptFrame {
         }
     }
 
-    pub fn syscall_info(&self) -> &cardinal3_interface::Syscall {
-        unsafe { &*(self.rax as *const cardinal3_interface::Syscall) }
+    pub fn syscall_context(&self) -> &mut cardinal3_interface::SyscallContext {
+        unsafe { &mut *(self.rax as *mut cardinal3_interface::SyscallContext) }
     }
 
     pub fn task_id(&self) -> u64 {
@@ -84,22 +84,6 @@ impl InterruptFrame {
 
     pub fn tasks_to_wake(&self) -> &'static mut [u64] {
         unsafe { core::slice::from_raw_parts_mut(self.rsi as *mut u64, self.rdx as usize) }
-    }
-
-    pub fn set_syscall_return(&mut self, value: SyscallReturn) {
-        match value {
-            SyscallReturn::Complete(v) => {
-                self.rax = 0;
-                self.rdi = v;
-            }
-            SyscallReturn::NotComplete => {
-                self.rax = 1;
-            }
-            SyscallReturn::Error(v) => {
-                self.rax = 2;
-                self.rdi = v as u64;
-            }
-        }
     }
 
     pub fn set_tasks_to_wake_count(&mut self, count: usize) {

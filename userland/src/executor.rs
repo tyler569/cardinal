@@ -2,7 +2,7 @@ use crate::syscall::syscall_future;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, VecDeque};
 use alloc::sync::Arc;
-use cardinal3_interface::{Syscall, SyscallReturn};
+use cardinal3_interface::{Syscall, SyscallReturn, SyscallContext};
 use core::future::Future;
 use core::pin::Pin;
 use core::sync::atomic::{AtomicU64, Ordering};
@@ -51,47 +51,50 @@ impl Executor {
         }
     }
 
-    pub fn dispatch_syscall(&mut self, task_id: u64, args: &Syscall) -> SyscallReturn {
-        let mut tasks_to_poll = [0u64; 32];
-        let (result, wake_count) = syscall_future(args, task_id, &mut tasks_to_poll);
-        for task_id in &tasks_to_poll[0..wake_count] {
-            self.tasks_to_poll.push_back(*task_id);
-        }
-        result
-    }
-
     pub fn backoff(&mut self) {
-        self.dispatch_syscall(0, &Syscall::Yield);
+        // self.dispatch_syscall(0, &Syscall::Yield);
     }
 }
 
 struct SyscallFuture<'a> {
-    syscall_args: Syscall<'a>,
+    syscall_context: SyscallContext<'a>,
+    sent: bool,
 }
 
 impl Future for SyscallFuture<'_> {
     type Output = SyscallReturn;
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let task_id = unsafe { &*(cx.waker().data() as *const WakerData) }.task_id;
-
-        let result = unsafe { EXECUTOR.dispatch_syscall(task_id, &self.syscall_args) };
-
-        match result {
-            SyscallReturn::Complete(_) => Poll::Ready(result),
-            SyscallReturn::NotComplete => Poll::Pending,
-            SyscallReturn::Error(_) => Poll::Ready(result),
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let waker_data = context_waker_data(cx);
+        if !self.sent {
+            let task_id = waker_data.task_id;
+            syscall_future(&mut self.syscall_context, task_id);
         }
+
+        let result = self.syscall_context.syscall_result;
+        if let SyscallReturn::NotComplete = result {
+            return Poll::Pending;
+        }
+
+        Poll::Ready(result)
     }
 }
 
 pub fn syscall<'a>(args: Syscall<'a>) -> impl Future<Output = SyscallReturn> + 'a {
-    SyscallFuture { syscall_args: args }
+    SyscallFuture {
+        syscall_context: args.into(),
+        sent: false,
+    }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 struct WakerData {
     task_id: u64,
+    executor: &'static Executor,
+}
+
+fn context_waker_data<'a>(context: &'a Context) -> &'a WakerData {
+    unsafe { &*(context.waker().data() as *const WakerData) }
 }
 
 const WAKER_VTABLE: RawWakerVTable =
@@ -118,7 +121,7 @@ unsafe fn exec_drop(data: *const ()) {
 }
 
 fn new_waker(task_id: u64) -> Waker {
-    let data = Arc::new(WakerData { task_id });
+    let data = Arc::new(WakerData { task_id, executor: unsafe { &EXECUTOR }  });
     let data = Arc::into_raw(data);
     let raw_waker = RawWaker::new(data as *const (), &WAKER_VTABLE);
     unsafe { Waker::from_raw(raw_waker) }
@@ -142,6 +145,6 @@ pub unsafe fn run() {
     }
 }
 
-pub fn dispatch_syscall(args: &Syscall) -> SyscallReturn {
-    unsafe { EXECUTOR.dispatch_syscall(0, args) }
-}
+// pub fn dispatch_syscall(args: &Syscall) -> SyscallReturn {
+//     unsafe { EXECUTOR.dispatch_syscall(0, args) }
+// }

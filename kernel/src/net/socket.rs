@@ -1,7 +1,7 @@
 use crate::net::Packet;
 use crate::per_cpu::PerCpu;
 use crate::print::println;
-use crate::{arch, process};
+use crate::arch;
 use alloc::collections::{BTreeMap, VecDeque};
 use cardinal3_interface::{Error, SyscallReturn};
 use core::cmp::min;

@@ -25,9 +25,9 @@ pub enum Syscall<'a> {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SyscallReturn {
+    NotComplete,
     Complete(u64),
     Error(Error),
-    NotComplete,
 }
 
 try_from_enum! {
@@ -35,5 +35,29 @@ try_from_enum! {
         InvalidSyscall,
         InvalidArgument,
         NoSuchSocket,
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct SyscallContext<'a> {
+    pub syscall: Syscall<'a>,
+    pub syscall_result: SyscallReturn,
+}
+
+impl<'a> SyscallContext<'a> {
+    pub fn new(syscall: Syscall<'a>) -> Self {
+        Self {
+            syscall,
+            syscall_result: SyscallReturn::NotComplete,
+            tasks_to_wake: [0; 16],
+            tasks_to_wake_count: None,
+        }
+    }
+}
+
+impl<'a> From<Syscall<'a>> for SyscallContext<'a> {
+    fn from(syscall: Syscall<'a>) -> Self {
+        Self::new(syscall)
     }
 }

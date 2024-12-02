@@ -24,15 +24,12 @@ mod pci;
 mod per_cpu;
 mod pmm;
 mod print;
-mod process;
-mod syscalls;
 mod timer;
 mod vmm;
 mod x86;
 
 use crate::arch::SERIAL;
 use crate::per_cpu::PerCpu;
-use crate::process::Process;
 use print::{print, println};
 use x86 as arch;
 
@@ -71,9 +68,7 @@ unsafe extern "C" fn kernel_main() -> ! {
         loop {
             let c = SERIAL.read().await;
             match c {
-                b's' => load_and_start_usermode_program(0),
                 b'm' => pmm::summary(),
-                b'p' => process::backtrace_all(),
                 b'b' => arch::breakpoint(),
                 b'B' => executor::spawn(async { arch::breakpoint() }),
                 _ => {}
@@ -95,10 +90,6 @@ unsafe extern "C" fn kernel_main() -> ! {
     //         0x01, 0x02, // payload
     //     ]);
     // }
-
-    for _ in 0..START_PROCS {
-        load_and_start_usermode_program(0);
-    }
 
     arch::sleep_forever()
 }
@@ -163,8 +154,4 @@ fn elf_data() -> *const [u8] {
         let mod_info = &*mods_info.modules_slice()[0];
         mod_info.data()
     }
-}
-
-unsafe fn load_and_start_usermode_program(arg: usize) {
-    process::schedule_pid(Process::new(&*elf_data(), arg));
 }
