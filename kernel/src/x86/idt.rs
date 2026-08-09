@@ -151,7 +151,7 @@ pub(super) unsafe fn load() {
     asm!("lidt [{0}]", in(reg) &ptr);
 }
 
-#[naked]
+#[unsafe(naked)]
 #[no_mangle]
 unsafe extern "C" fn interrupt_shim() {
     naked_asm!(
@@ -206,7 +206,7 @@ unsafe extern "C" fn interrupt_shim() {
 
 macro_rules! isr_no_error {
     ($name:ident, $num:expr) => {
-        #[naked]
+        #[unsafe(naked)]
         #[no_mangle]
         unsafe extern "C" fn $name() {
             naked_asm!(
@@ -220,7 +220,7 @@ macro_rules! isr_no_error {
 
 macro_rules! isr_error {
     ($name:ident, $num:expr) => {
-        #[naked]
+        #[unsafe(naked)]
         #[no_mangle]
         unsafe extern "C" fn $name() {
             naked_asm!(

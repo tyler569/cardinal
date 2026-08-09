@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(start)]
 #![feature(linkage)]
 
 extern crate alloc;
