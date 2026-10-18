@@ -68,6 +68,11 @@ pub unsafe fn create_ro_mapping(ph: &ProgramHeader, base: usize, vm_root: *mut P
     }
 }
 
+/// Maps the contents of ELF program header `ph` to the virtual memory area with root `vm_root`
+///
+/// This finds section contents at `base + ph.p_offset`, allocates and maps virtual memory at
+/// `ph.p_vaddr`, copies `ph.p_filesz` bytes from the ELF blob to the new virtual memory, then
+/// zeroes any remaining space in the region up to `ph.p_memsz` bytes.
 pub unsafe fn create_rw_mapping(ph: &ProgramHeader, base: usize, vm_root: *mut PageTable) {
     let flags = PageFlags::READ | PageFlags::USER | PageFlags::WRITE;
     let copy_end = (ph.p_vaddr + ph.p_filesz) as usize;
@@ -84,9 +89,9 @@ pub unsafe fn create_rw_mapping(ph: &ProgramHeader, base: usize, vm_root: *mut P
                 copy_len,
             );
         }
-        let zero_len = arch::PAGE_SIZE - copy_len;
+        let zero_len = ph.p_memsz as usize - copy_len;
         if zero_len > 0 {
-            core::ptr::write_bytes(copy_mapped as *mut u8, 0, zero_len);
+            core::ptr::write_bytes((copy_mapped as *mut u8).add(copy_len), 0, zero_len);
         }
 
         arch::map_in_table(vm_root, user_page, copy_phy, flags);
